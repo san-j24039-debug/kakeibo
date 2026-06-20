@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>かけいぼ</title>
+<style>
+  :root{
+    --bg:#F6F4EF;
+    --ink:#22281F;
+    --ink-soft:#6B7263;
+    --line:#E1DDD2;
+    --card:#FFFFFF;
+    --income:#3E7A5C;
+    --income-bg:#E7F1EA;
+    --expense:#B5533D;
+    --expense-bg:#F7E9E4;
+    --transfer:#5B6B8C;
+    --transfer-bg:#E9ECF4;
+    --accent:#22281F;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Hiragino Sans","Yu Gothic UI","Noto Sans JP",-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:96px;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:480px;
+    margin:0 auto;
+    padding:20px 16px 0;
+  }
+  /* Header */
+  header{
+    padding-top:8px;
+    margin-bottom:18px;
+  }
+  header h1{
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:.12em;
+    color:var(--ink-soft);
+    margin:0 0 14px;
+    text-transform:uppercase;
+  }
+  .balances{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .balance-card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:16px 14px;
+    border:1px solid var(--line);
+  }
+  .balance-card .label{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+  .balance-card .amount{
+    font-size:22px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:-.01em;
+  }
+  .balance-card.total .amount{color:var(--ink);}
+  .balance-card.bank{background:#222820;border:1px solid #222820;}
+  .balance-card.bank .label{color:#B9C2AE;}
+  .balance-card.bank .amount{color:#fff;}
+
+  /* Filter tabs */
+  .tabs{
+    display:flex;
+    gap:6px;
+    margin:20px 0 12px;
+    overflow-x:auto;
+  }
+  .tab{
+    flex:0 0 auto;
+    padding:7px 14px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink-soft);
+    background:transparent;
+    border:1px solid var(--line);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .tab.active{
+    background:var(--ink);
+    color:#fff;
+    border-color:var(--ink);
+  }
+
+  /* Transaction list */
+  .day-group{margin-bottom:4px;}
+  .day-label{
+    font-size:12px;
+    color:var(--ink-soft);
+    padding:14px 2px 6px;
+    font-weight:600;
+  }
+  .tx{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:13px 14px;
+    margin-bottom:8px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .tx-icon{
+    width:38px;height:38px;
+    border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;
+    flex-shrink:0;
+  }
+  .tx.income .tx-icon{background:var(--income-bg);}
+  .tx.expense .tx-icon{background:var(--expense-bg);}
+  .tx.transfer .tx-icon{background:var(--transfer-bg);}
+  .tx-main{flex:1;min-width:0;}
+  .tx-place{font-size:14.5px;font-weight:600;color:var(--ink);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tx-meta{font-size:12px;color:var(--ink-soft);margin-top:2px;
+    display:flex;gap:6px;align-items:center;}
+  .tx-source{
+    font-size:10.5px;
+    padding:1px 6px;
+    border-radius:6px;
+    background:var(--bg);
+    color:var(--ink-soft);
+  }
+  .tx-amount{
+    font-size:15px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    flex-shrink:0;
+  }
+  .tx.income .tx-amount{color:var(--income);}
+  .tx.expense .tx-amount{color:var(--expense);}
+  .tx.transfer .tx-amount{color:var(--transfer);}
+  .tx-del{
+    background:none;border:none;color:var(--ink-soft);
+    font-size:18px;line-height:1;padding:4px 2px;cursor:pointer;flex-shrink:0;
+    opacity:.5;
+  }
+
+  .empty{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:13.5px;
+    padding:60px 20px;
+    line-height:1.8;
+  }
+
+  /* FAB */
+  .fab{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%);
+    width:56px;height:56px;
+    border-radius:50%;
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    font-size:28px;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 20px rgba(34,40,32,.35);
+    cursor:pointer;
+    z-index:30;
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(20,22,17,.45);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:50;
+  }
+  .overlay.open{display:flex;}
+  .sheet{
+    background:var(--bg);
+    width:100%;
+    max-width:480px;
+    border-radius:20px 20px 0 0;
+    padding:18px 18px calc(env(safe-area-inset-bottom) + 18px);
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  .sheet h2{font-size:16px;margin:2px 0 16px;}
+  .seg{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:6px;
+    margin-bottom:16px;
+  }
+  .seg button{
+    padding:10px 4px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--card);
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .seg button.active.income{background:var(--income-bg);color:var(--income);border-color:var(--income);}
+  .seg button.active.expense{background:var(--expense-bg);color:var(--expense);border-color:var(--expense);}
+  .seg button.active.transfer{background:var(--transfer-bg);color:var(--transfer);border-color:var(--transfer);}
+
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    font-weight:600;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:12px 13px;
+    border-radius:11px;
+    border:1px solid var(--line);
+    background:var(--card);
+    font-size:15px;
+    color:var(--ink);
+    font-family:inherit;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--ink); outline-offset:1px;}
+  .amount-input{font-size:22px !important; font-weight:700; font-variant-numeric:tabular-nums;}
+
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:11px;
+    padding:12px 13px;
+    margin-bottom:16px;
+  }
+  .toggle-row span{font-size:13.5px;font-weight:600;color:var(--ink);}
+  .switch{
+    width:44px;height:26px;
+    border-radius:999px;
+    background:var(--line);
+    position:relative;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:background .15s;
+  }
+  .switch.on{background:var(--ink);}
+  .switch::after{
+    content:"";
+    position:absolute;
+    width:20px;height:20px;
+    border-radius:50%;
+    background:#fff;
+    top:3px;left:3px;
+    transition:left .15s;
+    box-shadow:0 1px 3px rgba(0,0,0,.25);
+  }
+  .switch.on::after{left:21px;}
+
+  .save-btn{
+    width:100%;
+    padding:15px;
+    border-radius:13px;
+    border:none;
+    background:var(--ink);
+    color:#fff;
+    font-size:15.5px;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:4px;
+  }
+  .cancel-btn{
+    width:100%;
+    padding:13px;
+    border-radius:13px;
+    border:none;
+    background:transparent;
+    color:var(--ink-soft);
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:6px;
+  }
+  .hint{font-size:11.5px;color:var(--ink-soft);margin-top:-8px;margin-bottom:16px;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>かけいぼ</h1>
+    <div class="balances">
+      <div class="balance-card total">
+        <div class="label">合計残高</div>
+        <div class="amount" id="totalBalance">¥0</div>
+      </div>
+      <div class="balance-card bank">
+        <div class="label">🏦 銀行残高</div>
+        <div class="amount" id="bankBalance">¥0</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-filter="all">すべて</button>
+    <button class="tab" data-filter="income">収入</button>
+    <button class="tab" data-filter="expense">支出</button>
+    <button class="tab" data-filter="transfer">入出金</button>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<button class="fab" id="openAdd" aria-label="記録を追加">＋</button>
+
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <h2>記録を追加</h2>
+
+    <div class="seg" id="typeSeg">
+      <button type="button" class="active income" data-type="expense">支出</button>
+      <button type="button" data-type="income">収入</button>
+      <button type="button" data-type="transfer">入出金</button>
+    </div>
+
+    <div class="field" id="placeField">
+      <label id="placeLabel">どこで（お店・内容）</label>
+      <input type="text" id="placeInput" placeholder="例）スーパー、コンビニ、お給料">
+    </div>
+
+    <div class="field">
+      <label>金額</label>
+      <input type="number" id="amountInput" class="amount-input" placeholder="0" inputmode="numeric">
+    </div>
+
+    <div class="field">
+      <label>日付</label>
+      <input type="date" id="dateInput">
+    </div>
+
+    <div class="toggle-row" id="bankToggleRow">
+      <span id="bankToggleLabel">銀行口座から払った</span>
+      <div class="switch" id="bankSwitch"></div>
+    </div>
+    <div class="hint" id="bankHint">オフの場合は現金として記録され、銀行残高は変わりません。</div>
+
+    <button class="save-btn" id="saveBtn">保存する</button>
+    <button class="cancel-btn" id="cancelBtn">キャンセル</button>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'kakeibo_transactions_v1';
+let transactions = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let currentType = 'expense';
+let bankFlag = false;
+let activeFilter = 'all';
+
+const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
+
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+}
+
+function computeBalances(){
+  let total = 0, bank = 0;
+  transactions.forEach(t=>{
+    if(t.type === 'income'){
+      total += t.amount;
+      if(t.bank) bank += t.amount;
+    } else if(t.type === 'expense'){
+      total -= t.amount;
+      if(t.bank) bank -= t.amount;
+    } else if(t.type === 'transfer'){
+      // transfer: bank.direction 'in' = 入金(現金→銀行), 'out' = 出金(銀行→現金)
+      if(t.direction === 'in') bank += t.amount;
+      else bank -= t.amount;
+      // total（合計＝現金＋銀行）は移動だけなので変化しない
+    }
+  });
+  return {total, bank};
+}
+
+function fmtDateLabel(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diffDays = Math.round((today - d) / 86400000);
+  const md = `${d.getMonth()+1}月${d.getDate()}日`;
+  const wd = ['日','月','火','水','木','金','土'][d.getDay()];
+  if(diffDays === 0) return `今日・${md}（${wd}）`;
+  if(diffDays === 1) return `昨日・${md}（${wd}）`;
+  return `${md}（${wd}）`;
+}
+
+const ICONS = {income:'💰', expense:'🧾', transfer:'🔁'};
+
+function render(){
+  const b = computeBalances();
+  document.getElementById('totalBalance').textContent = yen(b.total);
+  document.getElementById('bankBalance').textContent = yen(b.bank);
+
+  const list = document.getElementById('list');
+  let items = transactions.slice().sort((a,b)=> b.date.localeCompare(a.date) || b.id - a.id);
+  if(activeFilter !== 'all'){
+    items = items.filter(t => t.type === activeFilter);
+  }
+
+  if(items.length === 0){
+    list.innerHTML = `<div class="empty">まだ記録がありません。<br>右下の「＋」から最初の記録を追加しましょう。</div>`;
+    return;
+  }
+
+  let html = '';
+  let lastDate = null;
+  items.forEach(t=>{
+    if(t.date !== lastDate){
+      html += `<div class="day-label">${fmtDateLabel(t.date)}</div>`;
+      lastDate = t.date;
+    }
+    const sign = t.type === 'income' ? '+' : (t.type === 'expense' ? '−' : (t.direction==='in' ? '↑' : '↓'));
+    const sourceLabel = t.type === 'transfer'
+      ? (t.direction === 'in' ? '現金→銀行' : '銀行→現金')
+      : (t.bank ? '銀行' : '現金');
+    html += `
+      <div class="tx ${t.type}">
+        <div class="tx-icon">${ICONS[t.type]}</div>
+        <div class="tx-main">
+          <div class="tx-place">${escapeHtml(t.place)}</div>
+          <div class="tx-meta"><span class="tx-source">${sourceLabel}</span></div>
+        </div>
+        <div class="tx-amount">${sign}${yen(t.amount)}</div>
+        <button class="tx-del" data-id="${t.id}" aria-label="削除">✕</button>
+      </div>`;
+  });
+  list.innerHTML = html;
+
+  list.querySelectorAll('.tx-del').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const id = Number(e.currentTarget.dataset.id);
+      if(confirm('この記録を削除しますか？')){
+        transactions = transactions.filter(t => t.id !== id);
+        save(); render();
+      }
+    });
+  });
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Tabs
+document.getElementById('tabs').addEventListener('click', e=>{
+  const btn = e.target.closest('.tab');
+  if(!btn) return;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = btn.dataset.filter;
+  render();
+});
+
+// Modal open/close
+const overlay = document.getElementById('overlay');
+function openModal(){
+  document.getElementById('dateInput').value = new Date().toISOString().slice(0,10);
+  document.getElementById('placeInput').value = '';
+  document.getElementById('amountInput').value = '';
+  setType('expense');
+  bankFlag = false;
+  updateBankSwitch();
+  overlay.classList.add('open');
+  setTimeout(()=>document.getElementById('placeInput').focus(), 200);
+}
+function closeModal(){ overlay.classList.remove('open'); }
+document.getElementById('openAdd').addEventListener('click', openModal);
+document.getElementById('cancelBtn').addEventListener('click', closeModal);
+overlay.addEventListener('click', e=>{ if(e.target === overlay) closeModal(); });
+
+// Type segment
+function setType(type){
+  currentType = type;
+  document.querySelectorAll('#typeSeg button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.type === type);
+  });
+  const placeField = document.getElementById('placeField');
+  const placeLabel = document.getElementById('placeLabel');
+  const placeInput = document.getElementById('placeInput');
+  const bankRow = document.getElementById('bankToggleRow');
+  const bankHint = document.getElementById('bankHint');
+  const bankLabel = document.getElementById('bankToggleLabel');
+
+  if(type === 'expense'){
+    placeField.style.display='block';
+    placeLabel.textContent = 'どこで（お店・内容）';
+    placeInput.placeholder = '例）スーパー、コンビニ、家賃';
+    bankRow.style.display='flex'; bankHint.style.display='block';
+    bankLabel.textContent = '銀行口座から払った';
+    bankHint.textContent = 'オフの場合は現金として記録され、銀行残高は変わりません。';
+  } else if(type === 'income'){
+    placeField.style.display='block';
+    placeLabel.textContent = '内容（お給料・お小遣いなど）';
+    placeInput.placeholder = '例）お給料、お小遣い';
+    bankRow.style.display='flex'; bankHint.style.display='block';
+    bankLabel.textContent = '銀行口座に振り込まれた';
+    bankHint.textContent = 'オフの場合は現金として記録され、銀行残高は変わりません。';
+  } else {
+    placeField.style.display='block';
+    placeLabel.textContent = 'メモ（任意）';
+    placeInput.placeholder = '例）ATMで引き出し';
+    bankRow.style.display='flex'; bankHint.style.display='block';
+    bankLabel.textContent = '銀行→現金（出金）／オフで現金→銀行（入金）';
+    bankHint.textContent = '合計残高は変わらず、銀行残高だけが増減します。';
+  }
+}
+document.getElementById('typeSeg').addEventListener('click', e=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  setType(btn.dataset.type);
+});
+
+// Bank switch
+const bankSwitch = document.getElementById('bankSwitch');
+function updateBankSwitch(){
+  bankSwitch.classList.toggle('on', bankFlag);
+}
+bankSwitch.addEventListener('click', ()=>{
+  bankFlag = !bankFlag;
+  updateBankSwitch();
+});
+
+// Save
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  const place = document.getElementById('placeInput').value.trim();
+  const amount = Number(document.getElementById('amountInput').value);
+  const date = document.getElementById('dateInput').value;
+
+  if(!amount || amount <= 0){
+    alert('金額を入力してください');
+    return;
+  }
+  if(!date){
+    alert('日付を選択してください');
+    return;
+  }
+  const finalPlace = place || (currentType === 'transfer' ? '入出金' : '（内容なし）');
+
+  const tx = {
+    id: Date.now(),
+    type: currentType,
+    place: finalPlace,
+    amount: amount,
+    date: date,
+    bank: bankFlag,
+    direction: currentType === 'transfer' ? (bankFlag ? 'out' : 'in') : undefined
+  };
+  transactions.push(tx);
+  save();
+  closeModal();
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
