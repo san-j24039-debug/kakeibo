@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家計簿">
 <meta name="theme-color" content="#22281F">
-<meta name="app-version" content="2026.06.21.8">
+<meta name="app-version" content="2026.06.21.9">
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-v2-180.png">
 <link rel="manifest" href="./manifest.webmanifest?v=2">
 <link rel="icon" type="image/png" sizes="192x192" href="./assets/app-icon-v2-192.png">
@@ -542,6 +542,19 @@
   .settings-menu-arrow{color:var(--ink-soft);font-size:20px;}
   .settings-menu-btn:active{background:var(--line);}
   .settings-panel .hint{margin:0 0 12px;}
+  .balance-preview{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    background:var(--income-bg);
+    border:1px solid #CFDFD3;
+    border-radius:12px;
+    padding:11px 13px;
+    margin:-2px 0 14px;
+  }
+  .balance-preview span{font-size:12px;color:var(--ink-soft);font-weight:600;}
+  .balance-preview strong{font-size:18px;font-variant-numeric:tabular-nums;}
   .utility-btn{
     width:100%;
     padding:13px;
@@ -556,6 +569,33 @@
     margin-bottom:8px;
   }
   .utility-btn:active{background:var(--line);}
+  .tutorial-overlay{z-index:80;}
+  .tutorial-sheet{padding-top:22px;}
+  .tutorial-progress{font-size:11px;color:var(--ink-soft);font-weight:700;letter-spacing:.08em;}
+  .tutorial-visual{
+    width:58px;
+    height:58px;
+    border-radius:18px;
+    background:var(--card);
+    border:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:28px;
+    margin:14px 0 12px;
+  }
+  .tutorial-page h2{font-size:20px;margin:0 0 8px;}
+  .tutorial-lead{font-size:13px;color:var(--ink-soft);line-height:1.7;margin:0 0 14px;}
+  .tutorial-steps{margin:0 0 18px;padding:0;list-style:none;display:grid;gap:8px;}
+  .tutorial-steps li{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:11px;
+    padding:10px 12px;
+    font-size:13px;
+    line-height:1.5;
+  }
+  .tutorial-step-number{font-weight:800;margin-right:7px;color:var(--income);}
 </style>
 </head>
 <body>
@@ -661,7 +701,7 @@
           <span class="settings-menu-icon">¥</span>
           <span class="settings-menu-copy">
             <span class="settings-menu-title">残高を設定する</span>
-            <span class="settings-menu-desc">合計残高と銀行残高を変更</span>
+            <span class="settings-menu-desc">手持ち残高と銀行残高を変更</span>
           </span>
           <span class="settings-menu-arrow">›</span>
         </button>
@@ -673,6 +713,14 @@
           </span>
           <span class="settings-menu-arrow">›</span>
         </button>
+        <button class="settings-menu-btn" id="openTutorialSettingsBtn" type="button">
+          <span class="settings-menu-icon">?</span>
+          <span class="settings-menu-copy">
+            <span class="settings-menu-title">使い方を見る</span>
+            <span class="settings-menu-desc">残高設定と記録追加を確認</span>
+          </span>
+          <span class="settings-menu-arrow">›</span>
+        </button>
       </div>
       <button class="cancel-btn" id="cancelSettingsBtn">閉じる</button>
     </div>
@@ -680,14 +728,18 @@
     <div class="settings-panel" id="balanceSettingsPanel" hidden>
       <h2>残高を設定する</h2>
       <div class="field">
-        <label>合計残高（現金＋銀行）</label>
-        <input type="number" id="totalBalanceInput" class="amount-input" placeholder="0" inputmode="numeric">
+        <label>手持ち残高（現金）</label>
+        <input type="number" id="cashBalanceInput" class="amount-input" placeholder="0" inputmode="numeric">
       </div>
       <div class="field">
         <label>銀行残高</label>
         <input type="number" id="bankBalanceInput" class="amount-input" placeholder="0" inputmode="numeric">
       </div>
-      <div class="hint">この金額から記録を追加すると残高が計算されます。</div>
+      <div class="balance-preview">
+        <span>合計残高</span>
+        <strong id="balanceSettingsTotal">¥0</strong>
+      </div>
+      <div class="hint">手持ち残高と銀行残高を自動で足して表示します。</div>
       <button class="save-btn" id="saveSettingsBtn">保存する</button>
       <button class="cancel-btn settingsBackBtn" type="button">設定に戻る</button>
     </div>
@@ -703,12 +755,53 @@
   </div>
 </div>
 
+<!-- Tutorial Modal -->
+<div class="overlay tutorial-overlay" id="tutorialOverlay">
+  <div class="sheet tutorial-sheet">
+    <div class="tutorial-page" id="tutorialBalancePage">
+      <div class="tutorial-progress">1 / 2</div>
+      <div class="tutorial-visual">⚙</div>
+      <h2>残高を設定する方法</h2>
+      <p class="tutorial-lead">最初に手持ちのお金と銀行の残高を登録すると、合計残高が自動で表示されます。</p>
+      <ol class="tutorial-steps">
+        <li><span class="tutorial-step-number">1</span>右上の「⚙」を押す</li>
+        <li><span class="tutorial-step-number">2</span>「残高を設定する」を押す</li>
+        <li><span class="tutorial-step-number">3</span>手持ち残高と銀行残高を入力して保存</li>
+      </ol>
+      <button class="save-btn" id="tutorialNextBtn" type="button">次へ</button>
+      <button class="cancel-btn tutorialCloseBtn" type="button">閉じる</button>
+    </div>
+
+    <div class="tutorial-page" id="tutorialRecordPage" hidden>
+      <div class="tutorial-progress">2 / 2</div>
+      <div class="tutorial-visual">＋</div>
+      <h2>記録の追加方法</h2>
+      <p class="tutorial-lead">収入や支出は、画面下の「＋」から簡単に追加できます。</p>
+      <ol class="tutorial-steps">
+        <li><span class="tutorial-step-number">1</span>画面下の「＋」を押す</li>
+        <li><span class="tutorial-step-number">2</span>支出・収入と、現金・銀行を選ぶ</li>
+        <li><span class="tutorial-step-number">3</span>内容、金額、日付を入力して保存</li>
+      </ol>
+      <button class="save-btn" id="tutorialFinishBtn" type="button">使い始める</button>
+      <button class="cancel-btn" id="tutorialBackBtn" type="button">前に戻る</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const APP_VERSION = document.querySelector('meta[name="app-version"]').content;
 const STORAGE_KEY = 'kakeibo_transactions_v1';
 const BALANCE_KEY = 'kakeibo_balances_v1';
+const TUTORIAL_KEY = 'kakeibo_tutorial_seen_v1';
 let transactions = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 let balances = JSON.parse(localStorage.getItem(BALANCE_KEY) || '{"totalInitial":0,"bankInitial":0}');
+if(!Object.prototype.hasOwnProperty.call(balances, 'cashInitial')){
+  const legacyBank = Number(balances.bankInitial || 0);
+  balances.cashInitial = Number(balances.totalInitial || 0) - legacyBank;
+  balances.bankInitial = legacyBank;
+  balances.totalInitial = balances.cashInitial + balances.bankInitial;
+  localStorage.setItem(BALANCE_KEY, JSON.stringify(balances));
+}
 let currentType = 'expense';
 let currentSource = 'cash';
 let activeFilter = 'all';
@@ -830,18 +923,18 @@ function save(){
 }
 
 function computeBalances(){
-  let total = balances.totalInitial || 0;
-  let bank = balances.bankInitial || 0;
+  let cash = Number(balances.cashInitial || 0);
+  let bank = Number(balances.bankInitial || 0);
   transactions.forEach(t=>{
     if(t.type === 'income'){
-      total += t.amount;
       if(t.source === 'bank') bank += t.amount;
+      else cash += t.amount;
     } else if(t.type === 'expense'){
-      total -= t.amount;
       if(t.source === 'bank') bank -= t.amount;
+      else cash -= t.amount;
     }
   });
-  return {total, bank, cash: total - bank};
+  return {total: cash + bank, bank, cash};
 }
 
 function fmtDateLabel(dateStr){
@@ -1274,15 +1367,21 @@ function validateBackup(data){
   });
 
   const restoredBalances = data.balances || {};
-  const totalInitial = Number(restoredBalances.totalInitial || 0);
   const bankInitial = Number(restoredBalances.bankInitial || 0);
-  if(!Number.isFinite(totalInitial) || !Number.isFinite(bankInitial)){
+  const cashInitial = Object.prototype.hasOwnProperty.call(restoredBalances, 'cashInitial')
+    ? Number(restoredBalances.cashInitial || 0)
+    : Number(restoredBalances.totalInitial || 0) - bankInitial;
+  if(!Number.isFinite(cashInitial) || !Number.isFinite(bankInitial)){
     throw new Error('残高設定が壊れています。');
   }
 
   return {
     transactions: restoredTransactions,
-    balances: {totalInitial, bankInitial}
+    balances: {
+      cashInitial,
+      bankInitial,
+      totalInitial: cashInitial + bankInitial
+    }
   };
 }
 
@@ -1312,14 +1411,37 @@ function showSettingsPanel(panelId){
   document.querySelector('#settingsOverlay .sheet').scrollTop = 0;
 }
 
+function updateBalanceSettingsTotal(){
+  const cash = Number(document.getElementById('cashBalanceInput').value || 0);
+  const bank = Number(document.getElementById('bankBalanceInput').value || 0);
+  document.getElementById('balanceSettingsTotal').textContent = yen(cash + bank);
+}
+
+function showTutorialPage(page){
+  document.getElementById('tutorialBalancePage').hidden = page !== 'balance';
+  document.getElementById('tutorialRecordPage').hidden = page !== 'record';
+  document.querySelector('#tutorialOverlay .sheet').scrollTop = 0;
+}
+
+function openTutorial(){
+  showTutorialPage('balance');
+  document.getElementById('tutorialOverlay').classList.add('open');
+}
+
+function closeTutorial(){
+  localStorage.setItem(TUTORIAL_KEY, '1');
+  document.getElementById('tutorialOverlay').classList.remove('open');
+}
+
 document.getElementById('settingsBtn').addEventListener('click', ()=>{
   showSettingsPanel('settingsHome');
   document.getElementById('settingsOverlay').classList.add('open');
 });
 
 document.getElementById('openBalanceSettingsBtn').addEventListener('click', ()=>{
-  document.getElementById('totalBalanceInput').value = balances.totalInitial || '';
+  document.getElementById('cashBalanceInput').value = balances.cashInitial || '';
   document.getElementById('bankBalanceInput').value = balances.bankInitial || '';
+  updateBalanceSettingsTotal();
   showSettingsPanel('balanceSettingsPanel');
 });
 
@@ -1327,19 +1449,33 @@ document.getElementById('openBackupSettingsBtn').addEventListener('click', ()=>{
   showSettingsPanel('backupSettingsPanel');
 });
 
+document.getElementById('openTutorialSettingsBtn').addEventListener('click', ()=>{
+  document.getElementById('settingsOverlay').classList.remove('open');
+  openTutorial();
+});
+
 document.querySelectorAll('.settingsBackBtn').forEach(button=>{
   button.addEventListener('click', ()=>showSettingsPanel('settingsHome'));
 });
 
 document.getElementById('saveSettingsBtn').addEventListener('click', ()=>{
-  const total = Number(document.getElementById('totalBalanceInput').value);
+  const cash = Number(document.getElementById('cashBalanceInput').value);
   const bank = Number(document.getElementById('bankBalanceInput').value);
-  balances.totalInitial = total;
+  balances.cashInitial = cash;
   balances.bankInitial = bank;
+  balances.totalInitial = cash + bank;
   localStorage.setItem(BALANCE_KEY, JSON.stringify(balances));
   document.getElementById('settingsOverlay').classList.remove('open');
   renderAll();
 });
+
+document.getElementById('cashBalanceInput').addEventListener('input', updateBalanceSettingsTotal);
+document.getElementById('bankBalanceInput').addEventListener('input', updateBalanceSettingsTotal);
+
+document.getElementById('tutorialNextBtn').addEventListener('click', ()=>showTutorialPage('record'));
+document.getElementById('tutorialBackBtn').addEventListener('click', ()=>showTutorialPage('balance'));
+document.getElementById('tutorialFinishBtn').addEventListener('click', closeTutorial);
+document.querySelectorAll('.tutorialCloseBtn').forEach(button=>button.addEventListener('click', closeTutorial));
 
 document.getElementById('exportBackupBtn').addEventListener('click', exportBackup);
 document.getElementById('importBackupBtn').addEventListener('click', ()=>{
@@ -1358,6 +1494,7 @@ document.getElementById('settingsOverlay').addEventListener('click', e=>{ if(e.t
 
 selectedDate = null;
 renderAll();
+if(!localStorage.getItem(TUTORIAL_KEY)) setTimeout(openTutorial, 250);
 window.addEventListener('pageshow', ()=>setTimeout(checkForAppUpdate, 800));
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible') checkForAppUpdate();
