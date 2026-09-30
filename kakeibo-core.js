@@ -78,9 +78,20 @@
     return monthKey(new Date(year, month - 1 + offset, 1));
   }
 
+  function migrateBudgetPeriodLabels(budget){
+    if(budget.periodVersion === 2) return budget;
+    const entries = {};
+    for(const [key, entry] of Object.entries(budget.entries || {})){
+      const newKey = budget.mode === 'payday' ? shiftMonth(key, 1) : key;
+      entries[newKey] = {...entry, carryFrom:shiftMonth(newKey, -1)};
+    }
+    return {...budget, periodVersion:2, entries};
+  }
+
   function periodStart(key, settings, isHoliday = ()=>false){
-    const [year, month] = key.split('-').map(Number);
     if(settings.mode !== 'payday') return `${key}-01`;
+    // A payday funds the following named month: September 28 starts October.
+    const [year, month] = shiftMonth(key, -1).split('-').map(Number);
     const day = Math.min(Number(settings.payday) || 1, new Date(year, month, 0).getDate());
     const date = new Date(year, month - 1, day);
     const adjustment = settings.holidayAdjustment || 'previous';
@@ -168,6 +179,6 @@
   }
 
   return {transactionTotals, normalizeBalances, computeBalances, initialBalancesForCurrent,
-    safeHttpUrl, memoTotal, shiftMonth, periodStart, periodForDate, budgetSummary,
+    safeHttpUrl, memoTotal, shiftMonth, migrateBudgetPeriodLabels, periodStart, periodForDate, budgetSummary,
     calendarMonthReport, reportComparison, reconciliationEntries};
 });

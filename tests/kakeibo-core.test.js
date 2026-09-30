@@ -9,6 +9,7 @@ const {
   safeHttpUrl,
   memoTotal,
   shiftMonth,
+  migrateBudgetPeriodLabels,
   periodStart,
   periodForDate,
   budgetSummary,
@@ -99,24 +100,55 @@ test('calendar periods begin on the first even when payday is set', ()=>{
 test('payday period begins on the previous business day when a holiday follows a weekend', ()=>{
   const settings = {mode: 'payday', payday: 25, holidayAdjustment: 'previous'};
   const holiday = date=>date === '2026-05-25';
-  assert.equal(periodStart('2026-05', settings, holiday), '2026-05-22');
-  assert.equal(periodForDate('2026-05-21', settings, holiday).key, '2026-04');
-  assert.equal(periodForDate('2026-05-22', settings, holiday).key, '2026-05');
+  assert.equal(periodStart('2026-06', settings, holiday), '2026-05-22');
+  assert.equal(periodForDate('2026-05-21', settings, holiday).key, '2026-05');
+  assert.equal(periodForDate('2026-05-22', settings, holiday).key, '2026-06');
 });
 
 test('payday 31 uses month end and can shift into the previous month', ()=>{
   const settings = {mode: 'payday', payday: 31, holidayAdjustment: 'previous'};
-  assert.equal(periodStart('2026-02', settings), '2026-02-27');
-  assert.equal(periodStart('2026-05', settings), '2026-05-29');
+  assert.equal(periodStart('2026-03', settings), '2026-02-27');
+  assert.equal(periodStart('2026-06', settings), '2026-05-29');
   const firstDay = {mode: 'payday', payday: 1, holidayAdjustment: 'previous'};
-  assert.equal(periodStart('2026-01', firstDay,
+  assert.equal(periodStart('2026-02', firstDay,
     date=>date === '2026-01-01' || date === '2025-12-31'), '2025-12-30');
 });
 
 test('payday can use the next business day or no adjustment', ()=>{
   const settings = {mode: 'payday', payday: 25, holidayAdjustment: 'next'};
-  assert.equal(periodStart('2026-10', settings, date=>date === '2026-10-26'), '2026-10-27');
-  assert.equal(periodStart('2026-10', {...settings, holidayAdjustment:'none'}), '2026-10-25');
+  assert.equal(periodStart('2026-11', settings, date=>date === '2026-10-26'), '2026-10-27');
+  assert.equal(periodStart('2026-11', {...settings, holidayAdjustment:'none'}), '2026-10-25');
+});
+
+test('September 28 payday opens the October budget on October 1', ()=>{
+  const settings = {mode:'payday', payday:28, holidayAdjustment:'previous'};
+  assert.deepEqual(periodForDate('2026-10-01', settings),
+    {key:'2026-10', start:'2026-09-28', end:'2026-10-28'});
+  assert.equal(periodForDate('2026-09-27', settings).key, '2026-09');
+  assert.equal(periodForDate('2026-09-28', settings).key, '2026-10');
+  const entries = {'2026-10':{salary:100000,savingsGoal:50000,carryOverride:0}};
+  const summary = budgetSummary('2026-10', settings, entries, [
+    {type:'expense',date:'2026-09-27',amount:3000},
+    {type:'expense',date:'2026-09-28',amount:1000},
+    {type:'expense',date:'2026-10-27',amount:2000},
+    {type:'expense',date:'2026-10-28',amount:4000}
+  ]);
+  assert.equal(summary.spent, 3000);
+});
+
+test('older payday budgets move to the following month without losing settings', ()=>{
+  const old = {mode:'payday', entries:{
+    '2026-08':{salary:90000,savingsGoal:40000,carryOverride:0,carryFrom:'2026-07'},
+    '2026-09':{salary:100000,savingsGoal:50000,carryOverride:null,carryFrom:'2026-08'}
+  }};
+  const migrated = migrateBudgetPeriodLabels(old);
+  assert.equal(migrated.periodVersion, 2);
+  assert.deepEqual(Object.keys(migrated.entries), ['2026-09','2026-10']);
+  assert.equal(migrated.entries['2026-10'].salary, 100000);
+  assert.equal(migrated.entries['2026-10'].carryFrom, '2026-09');
+  assert.equal(migrateBudgetPeriodLabels(migrated), migrated);
+  const calendar = migrateBudgetPeriodLabels({mode:'calendar',entries:{'2026-09':old.entries['2026-09']}});
+  assert.deepEqual(Object.keys(calendar.entries), ['2026-09']);
 });
 
 test('unused budget carries forward and overspending reduces the savings estimate', ()=>{

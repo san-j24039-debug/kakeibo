@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家計簿">
 <meta name="theme-color" content="#22281F">
-<meta name="app-version" content="2026.09.30.5">
+<meta name="app-version" content="2026.10.01.1">
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-v2-180.png">
 <link rel="manifest" href="./manifest.webmanifest?v=2">
 <link rel="icon" type="image/png" sizes="192x192" href="./assets/app-icon-v2-192.png">
@@ -935,7 +935,7 @@
       <div class="field"><label for="budgetModeInput">月の始まり</label><select id="budgetModeInput"><option value="calendar">毎月1日</option><option value="payday">給料日</option></select></div>
       <div class="field"><label for="budgetPaydayInput">給料日（1〜31日）</label><input type="number" id="budgetPaydayInput" min="1" max="31" step="1" inputmode="numeric"></div>
       <div class="field"><label for="budgetHolidayInput">土日・祝日の給料日</label><select id="budgetHolidayInput"><option value="previous">前営業日</option><option value="next">翌営業日</option><option value="none">調整しない</option></select></div>
-      <div class="hint">31日がない月は月末を使います。給料日始まりでは実際の振込日を期間の初日とします。</div>
+      <div class="hint">31日がない月は月末を使います。給料日始まりでは、振込日から次の振込日前日までを翌月分として表示します（例：9月28日〜10月27日は10月分）。</div>
       <button class="save-btn" id="saveBudgetSettingsBtn" type="button">保存する</button>
       <button class="cancel-btn settingsBackBtn" type="button">設定に戻る</button>
     </div>
@@ -1059,8 +1059,13 @@ const MEMO_KEY = 'kakeibo_memos_v1';
 const BUDGET_KEY = 'kakeibo_budget_v1';
 let transactions = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 let memos = JSON.parse(localStorage.getItem(MEMO_KEY) || '[]');
-let budget = JSON.parse(localStorage.getItem(BUDGET_KEY) || '{"enabled":false,"mode":"calendar","payday":25,"holidayAdjustment":"previous","entries":{}}');
+const storedBudget = localStorage.getItem(BUDGET_KEY);
+const loadedBudget = JSON.parse(storedBudget || '{"enabled":false,"mode":"calendar","payday":25,"holidayAdjustment":"previous","entries":{}}');
+let budget = KakeiboCore.migrateBudgetPeriodLabels(loadedBudget);
 budget.entries ||= {};
+if(storedBudget && loadedBudget.periodVersion !== 2){
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(budget));
+}
 let balances = KakeiboCore.normalizeBalances(JSON.parse(localStorage.getItem(BALANCE_KEY) || '{}'));
 if(localStorage.getItem(BALANCE_KEY) && !Object.prototype.hasOwnProperty.call(JSON.parse(localStorage.getItem(BALANCE_KEY)), 'cashInitial')){
   localStorage.setItem(BALANCE_KEY, JSON.stringify(balances));
@@ -1907,6 +1912,7 @@ function validateBackup(data){
   });
   const budgetData = data.budget || {};
   const restoredBudget = {
+    periodVersion: budgetData.periodVersion === 2 ? 2 : 1,
     enabled: budgetData.enabled === true,
     mode: budgetData.mode === 'payday' ? 'payday' : 'calendar',
     payday: Number.isInteger(Number(budgetData.payday)) && Number(budgetData.payday) >= 1 && Number(budgetData.payday) <= 31 ? Number(budgetData.payday) : 25,
@@ -1928,7 +1934,7 @@ function validateBackup(data){
   return {
     transactions: restoredTransactions,
     memos: restoredMemos,
-    budget: restoredBudget,
+    budget: KakeiboCore.migrateBudgetPeriodLabels(restoredBudget),
     balances: {
       cashInitial,
       bankInitial,
