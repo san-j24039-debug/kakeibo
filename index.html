@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家計簿">
 <meta name="theme-color" content="#22281F">
-<meta name="app-version" content="2026.09.30.2">
+<meta name="app-version" content="2026.09.30.5">
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-v2-180.png">
 <link rel="manifest" href="./manifest.webmanifest?v=2">
 <link rel="icon" type="image/png" sizes="192x192" href="./assets/app-icon-v2-192.png">
@@ -132,9 +132,9 @@
   /* View switch */
   .view-switch{
     display:grid;
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:repeat(4,1fr);
     gap:6px;
-    margin:16px 0 12px;
+    margin:0;
     background:var(--line);
     padding:4px;
     border-radius:12px;
@@ -183,7 +183,10 @@
   }
 
   #listView,
-  #calendarView{
+  #calendarView,
+  #memoView,
+  #budgetView,
+  #reportView{
     flex:1 1 auto;
     min-height:0;
     overflow:hidden;
@@ -400,7 +403,7 @@
   /* FAB */
   .fab{
     position:fixed;
-    bottom:calc(24px + env(safe-area-inset-bottom, 0px));
+    bottom:calc(75px + env(safe-area-inset-bottom, 0px));
     left:50%;
     transform:translateX(-50%);
     width:56px;height:56px;
@@ -414,6 +417,7 @@
     cursor:pointer;
     z-index:30;
   }
+  .fab[hidden]{display:none;}
 
   /* Modal */
   .overlay{
@@ -681,6 +685,64 @@
   .tutorial-dots{display:flex;justify-content:center;gap:6px;flex:0 0 auto;padding-top:10px;}
   .tutorial-dot{width:6px;height:6px;border-radius:50%;background:var(--line);}
   .tutorial-dot.active{width:18px;border-radius:999px;background:var(--ink);}
+
+  .memo-summary{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 12px;margin-bottom:10px;border-radius:12px;
+    background:var(--card);border:1px solid var(--line);font-size:12px;color:var(--ink-soft);
+  }
+  .memo-summary strong{font-size:16px;color:var(--ink);}
+  #memoList{flex:1;min-height:0;overflow-y:auto;padding-bottom:calc(88px + env(safe-area-inset-bottom, 0px));}
+  .memo-card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden;cursor:pointer;}
+  .memo-card-image{width:100%;max-height:230px;object-fit:cover;display:block;background:var(--line);}
+  .memo-card-body{padding:13px 14px;}
+  .memo-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .memo-card-title{font-size:15px;font-weight:700;overflow-wrap:anywhere;}
+  .memo-card-amount{font-size:15px;font-weight:700;white-space:nowrap;color:var(--expense);}
+  .memo-card-text{font-size:12.5px;color:var(--ink-soft);line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:7px;}
+  .memo-link{display:inline-block;font-size:12px;color:#397DB5;margin-top:8px;text-decoration:none;overflow-wrap:anywhere;}
+  .memo-image-preview{width:100%;max-height:240px;object-fit:contain;border-radius:12px;background:var(--card);border:1px solid var(--line);margin-top:8px;}
+  .image-actions{display:flex;gap:8px;margin-top:8px;}
+  .small-btn{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:7px 10px;color:var(--ink-soft);font-weight:600;cursor:pointer;}
+  textarea{width:100%;min-height:92px;resize:vertical;border:1px solid var(--line);border-radius:12px;background:var(--card);padding:11px 12px;font:inherit;color:var(--ink);outline:none;}
+  textarea:focus{border-color:var(--ink);}
+  .view-switch.bottom-nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;
+    z-index:25;border-radius:14px 14px 0 0;padding:7px 7px calc(7px + env(safe-area-inset-bottom, 0px));
+    box-shadow:0 -3px 16px rgba(34,40,32,.12);}
+  .bottom-nav button{font-size:12px;padding:9px 0;}
+  .budget-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .budget-nav button{border:1px solid var(--line);border-radius:9px;background:var(--card);padding:7px 12px;font-size:18px;cursor:pointer;}
+  .budget-nav strong{font-size:15px;}
+  #budgetContent{flex:1;min-height:0;overflow-y:auto;padding-bottom:calc(100px + env(safe-area-inset-bottom, 0px));}
+  .budget-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:12px;}
+  .budget-card.over{border-color:var(--expense);background:#FFF6F2;}
+  .budget-main-label{font-size:13px;color:var(--ink-soft);font-weight:600;}
+  .budget-main-amount{font-size:clamp(28px,8vw,42px);font-weight:800;margin:6px 0;}
+  .budget-card.over .budget-main-amount{color:var(--expense);}
+  .budget-period{font-size:12px;color:var(--ink-soft);margin-bottom:12px;}
+  .budget-progress{height:10px;background:var(--line);border-radius:99px;overflow:hidden;}
+  .budget-progress span{display:block;height:100%;background:var(--income);}
+  .budget-card.over .budget-progress span{background:var(--expense);}
+  .budget-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .budget-row:last-child{border-bottom:0;}
+  .budget-row strong{text-align:right;}
+  .budget-note{font-size:12px;color:var(--ink-soft);line-height:1.6;margin:8px 0 14px;}
+  .budget-actions{display:flex;gap:8px;}
+  .budget-actions button{flex:1;}
+  #budgetEnabledInput{width:20px;height:20px;vertical-align:middle;}
+  #reportContent{flex:1;min-height:0;overflow-y:auto;padding-bottom:calc(100px + env(safe-area-inset-bottom, 0px));}
+  .report-hero{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:12px;}
+  .report-metric{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px;}
+  .report-metric span{display:block;color:var(--ink-soft);font-size:11px;margin-bottom:5px;}
+  .report-metric strong{font-size:clamp(14px,4vw,19px);font-variant-numeric:tabular-nums;}
+  .report-chart{display:flex;align-items:flex-end;gap:7px;height:168px;padding:16px 4px 0;}
+  .report-column{flex:1;min-width:0;text-align:center;font-size:10px;color:var(--ink-soft);}
+  .report-bar-track{height:112px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:5px;}
+  .report-bar{width:min(28px,90%);min-height:3px;border-radius:5px 5px 0 0;background:#9BAD9B;}
+  .report-column.current .report-bar{background:var(--ink);}
+  .report-column strong{display:block;overflow:hidden;text-overflow:ellipsis;font-size:10px;color:var(--ink);}
+  .reconcile-choice{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.5;}
+  .reconcile-choice input{width:18px;height:18px;flex-shrink:0;margin-top:1px;}
 </style>
 </head>
 <body>
@@ -707,11 +769,6 @@
     </div>
   </header>
 
-  <div class="view-switch" id="viewSwitch">
-    <button class="active" data-view="list">リスト</button>
-    <button data-view="calendar">カレンダー</button>
-  </div>
-
   <!-- LIST VIEW -->
   <div id="listView">
     <div class="tabs" id="tabs">
@@ -737,7 +794,28 @@
     </div>
     <div id="monthList"></div>
   </div>
+
+  <div id="memoView" style="display:none;">
+    <div class="memo-summary"><span>メモの予定金額</span><strong id="memoTotal">¥0</strong></div>
+    <div id="memoList"></div>
+  </div>
+  <div id="budgetView" style="display:none;">
+    <div class="budget-nav"><button id="budgetPrevBtn" type="button" aria-label="前の期間">‹</button><strong id="budgetPeriodTitle"></strong><button id="budgetNextBtn" type="button" aria-label="次の期間">›</button></div>
+    <div id="budgetContent"></div>
+  </div>
+  <div id="reportView" style="display:none;">
+    <div class="budget-nav"><button id="reportPrevBtn" type="button" aria-label="前の月">‹</button><strong id="reportMonthTitle"></strong><button id="reportNextBtn" type="button" aria-label="次の月">›</button></div>
+    <div id="reportContent"></div>
+  </div>
 </div>
+
+<nav class="view-switch bottom-nav" id="viewSwitch" aria-label="画面切り替え">
+  <button class="active" data-view="list">リスト</button>
+  <button data-view="calendar">カレンダー</button>
+  <button data-view="memo">メモ</button>
+  <button data-view="budget" id="budgetTab" hidden>予算</button>
+  <button data-view="report">分析</button>
+</nav>
 
 <button class="fab" id="openAdd" aria-label="記録を追加">＋</button>
 
@@ -778,6 +856,40 @@
   </div>
 </div>
 
+<!-- Memo Modal -->
+<div class="overlay" id="memoOverlay">
+  <div class="sheet">
+    <h2 id="memoModalTitle">メモを追加</h2>
+    <div class="field">
+      <label>タイトル</label>
+      <input type="text" id="memoTitleInput" placeholder="例）欲しい服" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>予定金額</label>
+      <input type="number" id="memoAmountInput" class="amount-input" placeholder="0" inputmode="numeric" min="0" step="1">
+    </div>
+    <div class="field">
+      <label>リンク</label>
+      <input type="url" id="memoUrlInput" placeholder="https://..." inputmode="url" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>画像</label>
+      <input type="file" id="memoImageInput" accept="image/*">
+      <img id="memoImagePreview" class="memo-image-preview" alt="選択した画像" hidden>
+      <div class="image-actions" id="memoImageActions" hidden>
+        <button type="button" class="small-btn" id="removeMemoImageBtn">画像を削除</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>メモ</label>
+      <textarea id="memoTextInput" placeholder="色、サイズ、購入予定など"></textarea>
+    </div>
+    <button class="save-btn" id="saveMemoBtn">保存する</button>
+    <button class="delete-btn" id="deleteMemoBtn" style="display:none;">削除する</button>
+    <button class="cancel-btn" id="cancelMemoBtn">キャンセル</button>
+  </div>
+</div>
+
 <!-- Settings Modal -->
 <div class="overlay" id="settingsOverlay">
   <div class="sheet">
@@ -790,6 +902,11 @@
             <span class="settings-menu-title">残高を設定する</span>
             <span class="settings-menu-desc">今の実際の残高に合わせる</span>
           </span>
+          <span class="settings-menu-arrow">›</span>
+        </button>
+        <button class="settings-menu-btn" id="openBudgetSettingsBtn" type="button">
+          <span class="settings-menu-icon">◉</span>
+          <span class="settings-menu-copy"><span class="settings-menu-title">予算管理</span><span class="settings-menu-desc">使用限度額・給料日・貯金目標</span></span>
           <span class="settings-menu-arrow">›</span>
         </button>
         <button class="settings-menu-btn" id="openBackupSettingsBtn" type="button">
@@ -812,6 +929,17 @@
       <button class="cancel-btn" id="cancelSettingsBtn">閉じる</button>
     </div>
 
+    <div class="settings-panel" id="budgetSettingsPanel" hidden>
+      <h2>予算管理</h2>
+      <div class="field"><label><input type="checkbox" id="budgetEnabledInput"> 予算機能を使う</label></div>
+      <div class="field"><label for="budgetModeInput">月の始まり</label><select id="budgetModeInput"><option value="calendar">毎月1日</option><option value="payday">給料日</option></select></div>
+      <div class="field"><label for="budgetPaydayInput">給料日（1〜31日）</label><input type="number" id="budgetPaydayInput" min="1" max="31" step="1" inputmode="numeric"></div>
+      <div class="field"><label for="budgetHolidayInput">土日・祝日の給料日</label><select id="budgetHolidayInput"><option value="previous">前営業日</option><option value="next">翌営業日</option><option value="none">調整しない</option></select></div>
+      <div class="hint">31日がない月は月末を使います。給料日始まりでは実際の振込日を期間の初日とします。</div>
+      <button class="save-btn" id="saveBudgetSettingsBtn" type="button">保存する</button>
+      <button class="cancel-btn settingsBackBtn" type="button">設定に戻る</button>
+    </div>
+
     <div class="settings-panel" id="balanceSettingsPanel" hidden>
       <h2>残高を設定する</h2>
       <div class="field">
@@ -826,19 +954,37 @@
         <span>合計残高</span>
         <strong id="balanceSettingsTotal">¥0</strong>
       </div>
-      <div class="hint">現在の実際の残高を入力してください。記録を付け忘れた場合も、ここで残高を合わせ直せます。</div>
+      <div class="hint">現在の実際の残高を入力してください。記録漏れがあれば差額を支出・収入として残せます。</div>
+      <div class="field"><label class="reconcile-choice"><input type="checkbox" id="recordBalanceDifferenceInput"> 差額を未記録の取引として追加する</label></div>
+      <div id="balanceDifferenceFields" hidden>
+        <div class="field"><label for="balanceDifferenceDateInput">差額を記録する日付</label><input type="date" id="balanceDifferenceDateInput"></div>
+        <div class="hint" id="balanceDifferencePreview"></div>
+        <div class="hint">銀行から現金への引き出しは、振替として記録します。</div>
+      </div>
       <button class="save-btn" id="saveSettingsBtn">保存する</button>
       <button class="cancel-btn settingsBackBtn" type="button">設定に戻る</button>
     </div>
 
     <div class="settings-panel" id="backupSettingsPanel" hidden>
       <h2>バックアップ・復元</h2>
-      <div class="hint">記録と残高設定をファイルに保存し、機種変更後にも復元できます。</div>
+      <div class="hint">記録・メモ・画像・残高・予算設定をファイルに保存し、機種変更後にも復元できます。</div>
       <button class="utility-btn" id="exportBackupBtn" type="button">バックアップを書き出す</button>
       <button class="utility-btn" id="importBackupBtn" type="button">バックアップから復元</button>
       <input id="backupFileInput" type="file" accept="application/json,.json" hidden>
       <button class="cancel-btn settingsBackBtn" type="button">設定に戻る</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="budgetEntryOverlay">
+  <div class="sheet">
+    <h2 id="budgetEntryTitle">今月の予算</h2>
+    <div class="field"><label for="budgetSalaryInput">今月の給料（予定）</label><input type="number" id="budgetSalaryInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="0"></div>
+    <div class="field"><label for="budgetSavingsInput">貯金目標</label><input type="number" id="budgetSavingsInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="0"></div>
+    <div class="field"><label for="budgetCarryInput">前の期間からの繰越（マイナスも可）</label><input type="number" id="budgetCarryInput" class="amount-input" step="1" inputmode="numeric" placeholder="0"></div>
+    <div class="hint" id="budgetCarryHint"></div>
+    <button class="save-btn" id="saveBudgetEntryBtn" type="button">保存する</button>
+    <button class="cancel-btn" id="cancelBudgetEntryBtn" type="button">あとで設定</button>
   </div>
 </div>
 
@@ -909,7 +1055,12 @@ const APP_VERSION = document.querySelector('meta[name="app-version"]').content;
 const STORAGE_KEY = 'kakeibo_transactions_v1';
 const BALANCE_KEY = 'kakeibo_balances_v1';
 const TUTORIAL_KEY = 'kakeibo_tutorial_seen_v1';
+const MEMO_KEY = 'kakeibo_memos_v1';
+const BUDGET_KEY = 'kakeibo_budget_v1';
 let transactions = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let memos = JSON.parse(localStorage.getItem(MEMO_KEY) || '[]');
+let budget = JSON.parse(localStorage.getItem(BUDGET_KEY) || '{"enabled":false,"mode":"calendar","payday":25,"holidayAdjustment":"previous","entries":{}}');
+budget.entries ||= {};
 let balances = KakeiboCore.normalizeBalances(JSON.parse(localStorage.getItem(BALANCE_KEY) || '{}'));
 if(localStorage.getItem(BALANCE_KEY) && !Object.prototype.hasOwnProperty.call(JSON.parse(localStorage.getItem(BALANCE_KEY)), 'cashInitial')){
   localStorage.setItem(BALANCE_KEY, JSON.stringify(balances));
@@ -922,6 +1073,12 @@ let calMonth = new Date(); calMonth.setDate(1);
 let selectedDate = null;
 let calendarListMode = 'month';
 let editingTxId = null;
+let editingMemoId = null;
+let editingMemoImage = '';
+let budgetViewKey = null;
+let reportViewKey = null;
+let editingBudgetKey = null;
+let promptedBudgetKey = null;
 let lastUpdateCheck = 0;
 let tutorialStep = 0;
 
@@ -1255,7 +1412,129 @@ function renderAll(){
   document.getElementById('bankBalance').textContent = yen(b.bank);
   document.getElementById('cashBalance').textContent = yen(b.cash);
   if(viewMode === 'list') renderList();
-  else renderCalendar();
+  else if(viewMode === 'calendar') renderCalendar();
+  else if(viewMode === 'memo') renderMemos();
+  else if(viewMode === 'budget') renderBudget();
+  else renderReport();
+}
+
+function renderReport(){
+  const currentKey = todayStr().slice(0, 7);
+  reportViewKey ||= currentKey;
+  const key = reportViewKey;
+  document.getElementById('reportMonthTitle').textContent = budgetMonthLabel(key);
+  document.getElementById('reportNextBtn').disabled = key >= currentKey;
+  const report = KakeiboCore.reportComparison(key, transactions);
+  const difference = report.difference;
+  const differenceText = difference > 0 ? `先月より${yen(difference)}多い` :
+    difference < 0 ? `先月より${yen(-difference)}少ない` : '先月と同じ';
+  const maxExpense = Math.max(1, ...report.chart.map(month=>month.expense));
+  const chart = report.chart.map(month=>{
+    const height = month.expense ? Math.max(3, Math.round(month.expense / maxExpense * 100)) : 3;
+    const monthLabel = Number(month.key.slice(5));
+    return `<div class="report-column ${month.key === key ? 'current' : ''}" aria-label="${escapeHtml(budgetMonthLabel(month.key))}の支出 ${yen(month.expense)}"><div class="report-bar-track"><span class="report-bar" style="height:${height}%"></span></div><strong>${monthLabel}月</strong></div>`;
+  }).join('');
+  document.getElementById('reportContent').innerHTML = `
+    <div class="report-hero">
+      <div class="report-metric"><span>支出</span><strong>${yen(report.current.expense)}</strong></div>
+      <div class="report-metric"><span>収入</span><strong>${yen(report.current.income)}</strong></div>
+      <div class="report-metric"><span>収支</span><strong>${report.current.net >= 0 ? '+' : '−'}${yen(Math.abs(report.current.net))}</strong></div>
+      <div class="report-metric"><span>前月との差</span><strong>${difference === 0 ? '±' : difference > 0 ? '+' : '−'}${yen(Math.abs(difference))}</strong></div>
+    </div>
+    <div class="budget-card"><div class="budget-main-label">支出の推移（直近6か月）</div><div class="report-chart" role="img" aria-label="6か月の支出額を棒グラフで表示">${chart}</div><div class="budget-note">${differenceText}・前の3か月の平均 ${yen(report.priorThreeAverage)}</div></div>
+    <div class="budget-card"><div class="budget-main-label">月別の支出</div>${report.chart.slice().reverse().map(month=>`<div class="budget-row"><span>${budgetMonthLabel(month.key)}</span><strong>${yen(month.expense)}</strong></div>`).join('')}</div>
+    <div class="budget-note">暦月（1日〜月末）の記録です。銀行→現金の振替と、記録を付けない残高補正は収支に含めません。</div>`;
+}
+
+function isBankHoliday(dateStr){
+  const date = new Date(`${dateStr}T12:00:00`);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  return japaneseHolidays(date.getFullYear()).has(dateStr) ||
+    (month === 1 && (day === 2 || day === 3)) || (month === 12 && day === 31);
+}
+
+function currentBudgetPeriod(){
+  return KakeiboCore.periodForDate(todayStr(), budget, isBankHoliday);
+}
+
+function budgetMonthLabel(key){
+  const [year, month] = key.split('-').map(Number);
+  return `${year}年${month}月`;
+}
+
+function renderBudget(){
+  const currentKey = currentBudgetPeriod().key;
+  budgetViewKey ||= currentKey;
+  const key = budgetViewKey;
+  document.getElementById('budgetPeriodTitle').textContent = budgetMonthLabel(key);
+  document.getElementById('budgetNextBtn').disabled = key >= currentKey;
+  const content = document.getElementById('budgetContent');
+  const summary = KakeiboCore.budgetSummary(key, budget, budget.entries, transactions, isBankHoliday);
+  if(!summary){
+    content.innerHTML = `<div class="budget-card"><div class="budget-note">${key === currentKey ? '今月' : budgetMonthLabel(key)}の予算は未設定です。</div><button class="save-btn" id="editBudgetEntryBtn" type="button">給料と貯金目標を設定</button></div>`;
+  } else {
+    const over = summary.remaining < 0;
+    const percent = summary.limit > 0 ? Math.round(summary.spent / summary.limit * 100) : (summary.spent > 0 ? 100 : 0);
+    const carrySign = summary.carry > 0 ? '+' : '';
+    const rows = [
+      ['今月の給料', yen(summary.salary)],
+      ['貯金目標', yen(summary.savingsGoal)],
+      ['基本使用限度額', yen(summary.salary - summary.savingsGoal)],
+      [`${budgetMonthLabel(summary.carryFrom)}からの繰越`, `${carrySign}${yen(summary.carry)}`],
+      ['今月の使用限度額', yen(summary.limit)],
+      ['使用済み', yen(summary.spent)],
+      ['貯金見込み', yen(summary.savingsEstimate)]
+    ];
+    if(summary.shortage) rows.push(['貯金目標を超えた不足', yen(summary.shortage)]);
+    const note = over ? `使用限度額を${yen(-summary.remaining)}超過。貯金目標から${yen(Math.min(summary.savingsGoal, -summary.remaining))}使用しています。` : `${Math.max(0, percent)}%使用。残額は次の期間へ繰り越せます。`;
+    content.innerHTML = `<div class="budget-card ${over ? 'over' : ''}"><div class="budget-main-label">${over ? '使用限度額を超過' : 'あと使える金額'}</div><div class="budget-main-amount">${yen(Math.abs(summary.remaining))}</div><div class="budget-period">${summary.start} 〜 ${new Date(new Date(summary.end+'T12:00:00').getTime()-86400000).toLocaleDateString('ja-JP')}</div><div class="budget-progress"><span style="width:${Math.min(100, Math.max(0, percent))}%"></span></div><div class="budget-note">${note}</div>${rows.map(([label,value])=>`<div class="budget-row"><span>${label}</span><strong>${value}</strong></div>`).join('')}<button class="save-btn" id="editBudgetEntryBtn" type="button">この期間の設定を変更</button></div>`;
+  }
+  document.getElementById('editBudgetEntryBtn').addEventListener('click', ()=>openBudgetEntry(key));
+}
+
+function openBudgetEntry(key){
+  editingBudgetKey = key;
+  const entry = budget.entries[key];
+  const previousKey = KakeiboCore.shiftMonth(key, -1);
+  const previous = KakeiboCore.budgetSummary(previousKey, budget, budget.entries, transactions, isBankHoliday);
+  document.getElementById('budgetEntryTitle').textContent = `${budgetMonthLabel(key)}の予算`;
+  document.getElementById('budgetSalaryInput').value = entry?.salary ?? '';
+  document.getElementById('budgetSavingsInput').value = entry?.savingsGoal ?? '';
+  document.getElementById('budgetCarryInput').value = entry?.carryOverride ?? previous?.remaining ?? 0;
+  document.getElementById('budgetCarryHint').textContent = `${budgetMonthLabel(previousKey)}の残額：${previous ? yen(previous.remaining) : '未設定'}。繰越額を変更すると、この期間の予算に反映されます。`;
+  document.getElementById('budgetEntryOverlay').classList.add('open');
+}
+
+function promptCurrentBudget(){
+  if(!budget.enabled || document.querySelector('.overlay.open')) return;
+  const key = currentBudgetPeriod().key;
+  if(!budget.entries[key] && promptedBudgetKey !== key){
+    promptedBudgetKey = key;
+    openBudgetEntry(key);
+  }
+}
+
+function renderMemos(){
+  const list = document.getElementById('memoList');
+  document.getElementById('memoTotal').textContent = yen(KakeiboCore.memoTotal(memos));
+  if(memos.length === 0){
+    list.innerHTML = '<div class="empty">まだメモがありません。<br>右下の「＋」から追加できます。</div>';
+    return;
+  }
+  list.innerHTML = memos.slice().sort((a,b)=>b.id-a.id).map(memo=>{
+    const url = KakeiboCore.safeHttpUrl(memo.url);
+    const image = memo.image ? `<img class="memo-card-image" src="${escapeHtml(memo.image)}" alt="">` : '';
+    const amount = Number(memo.amount) > 0 ? `<div class="memo-card-amount">${yen(memo.amount)}</div>` : '';
+    const text = memo.text ? `<div class="memo-card-text">${escapeHtml(memo.text)}</div>` : '';
+    const link = url ? `<a class="memo-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" data-memo-link>リンクを開く ↗</a>` : '';
+    return `<article class="memo-card" data-memo-id="${memo.id}">${image}<div class="memo-card-body"><div class="memo-card-head"><div class="memo-card-title">${escapeHtml(memo.title)}</div>${amount}</div>${text}${link}</div></article>`;
+  }).join('');
+  list.querySelectorAll('.memo-card').forEach(card=>card.addEventListener('click', event=>{
+    if(event.target.closest('[data-memo-link]')) return;
+    const memo = memos.find(item=>item.id === Number(card.dataset.memoId));
+    if(memo) openMemoModal(memo);
+  }));
 }
 
 /* View switch */
@@ -1267,7 +1546,31 @@ document.getElementById('viewSwitch').addEventListener('click', e=>{
   viewMode = btn.dataset.view;
   document.getElementById('listView').style.display = viewMode === 'list' ? 'flex' : 'none';
   document.getElementById('calendarView').style.display = viewMode === 'calendar' ? 'flex' : 'none';
+  document.getElementById('memoView').style.display = viewMode === 'memo' ? 'flex' : 'none';
+  document.getElementById('budgetView').style.display = viewMode === 'budget' ? 'flex' : 'none';
+  document.getElementById('reportView').style.display = viewMode === 'report' ? 'flex' : 'none';
+  document.getElementById('openAdd').hidden = viewMode === 'budget' || viewMode === 'report';
+  document.getElementById('openAdd').setAttribute('aria-label', viewMode === 'memo' ? 'メモを追加' : '記録を追加');
   renderAll();
+});
+
+document.getElementById('budgetPrevBtn').addEventListener('click', ()=>{
+  budgetViewKey = KakeiboCore.shiftMonth(budgetViewKey, -1);
+  renderBudget();
+});
+document.getElementById('budgetNextBtn').addEventListener('click', ()=>{
+  const next = KakeiboCore.shiftMonth(budgetViewKey, 1);
+  if(next <= currentBudgetPeriod().key) budgetViewKey = next;
+  renderBudget();
+});
+document.getElementById('reportPrevBtn').addEventListener('click', ()=>{
+  reportViewKey = KakeiboCore.shiftMonth(reportViewKey, -1);
+  renderReport();
+});
+document.getElementById('reportNextBtn').addEventListener('click', ()=>{
+  const next = KakeiboCore.shiftMonth(reportViewKey, 1);
+  if(next <= todayStr().slice(0, 7)) reportViewKey = next;
+  renderReport();
 });
 
 /* Calendar nav */
@@ -1317,9 +1620,112 @@ function openModal(){
   setTimeout(()=>document.getElementById('placeInput').focus(), 200);
 }
 function closeModal(){ addOverlay.classList.remove('open'); }
-document.getElementById('openAdd').addEventListener('click', openModal);
+document.getElementById('openAdd').addEventListener('click', ()=> viewMode === 'memo' ? openMemoModal() : openModal());
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 addOverlay.addEventListener('click', e=>{ if(e.target === addOverlay) closeModal(); });
+
+const memoOverlay = document.getElementById('memoOverlay');
+function setMemoImage(image){
+  editingMemoImage = image || '';
+  const preview = document.getElementById('memoImagePreview');
+  preview.src = editingMemoImage;
+  preview.hidden = !editingMemoImage;
+  document.getElementById('memoImageActions').hidden = !editingMemoImage;
+}
+
+function openMemoModal(memo = null){
+  editingMemoId = memo?.id || null;
+  document.getElementById('memoModalTitle').textContent = memo ? 'メモを編集' : 'メモを追加';
+  document.getElementById('memoTitleInput').value = memo?.title || '';
+  document.getElementById('memoAmountInput').value = memo?.amount || '';
+  document.getElementById('memoUrlInput').value = memo?.url || '';
+  document.getElementById('memoTextInput').value = memo?.text || '';
+  document.getElementById('memoImageInput').value = '';
+  document.getElementById('deleteMemoBtn').style.display = memo ? 'block' : 'none';
+  setMemoImage(memo?.image || '');
+  memoOverlay.classList.add('open');
+  setTimeout(()=>document.getElementById('memoTitleInput').focus(), 200);
+}
+
+function closeMemoModal(){ memoOverlay.classList.remove('open'); }
+
+function compressMemoImage(file){
+  return new Promise((resolve, reject)=>{
+    if(!file?.type.startsWith('image/')) return reject(new Error('画像ファイルを選択してください。'));
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error('画像を読み込めませんでした。'));
+    reader.onload = ()=>{
+      const image = new Image();
+      image.onerror = ()=>reject(new Error('画像を読み込めませんでした。'));
+      image.onload = ()=>{
+        const maxSide = 1200;
+        const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', .78));
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('memoImageInput').addEventListener('change', async event=>{
+  const file = event.target.files?.[0];
+  if(!file) return;
+  try{
+    setMemoImage(await compressMemoImage(file));
+  } catch(error){
+    alert(error.message);
+    event.target.value = '';
+  }
+});
+document.getElementById('removeMemoImageBtn').addEventListener('click', ()=>{
+  document.getElementById('memoImageInput').value = '';
+  setMemoImage('');
+});
+document.getElementById('cancelMemoBtn').addEventListener('click', closeMemoModal);
+memoOverlay.addEventListener('click', event=>{ if(event.target === memoOverlay) closeMemoModal(); });
+
+document.getElementById('saveMemoBtn').addEventListener('click', ()=>{
+  const title = document.getElementById('memoTitleInput').value.trim();
+  const amount = Number(document.getElementById('memoAmountInput').value || 0);
+  const rawUrl = document.getElementById('memoUrlInput').value.trim();
+  const url = KakeiboCore.safeHttpUrl(rawUrl);
+  if(!title){ alert('タイトルを入力してください。'); return; }
+  if(!Number.isFinite(amount) || amount < 0){ alert('予定金額を0以上の数字で入力してください。'); return; }
+  if(rawUrl && !url){ alert('リンクは http:// または https:// から入力してください。'); return; }
+  const memo = {
+    id: editingMemoId || Date.now(),
+    title,
+    amount,
+    url,
+    image: editingMemoImage,
+    text: document.getElementById('memoTextInput').value.trim()
+  };
+  const nextMemos = editingMemoId
+    ? memos.map(item=>item.id === editingMemoId ? memo : item)
+    : [...memos, memo];
+  try{
+    localStorage.setItem(MEMO_KEY, JSON.stringify(nextMemos));
+  } catch(error){
+    alert('画像の保存容量が足りません。画像を小さくするか、不要な画像を削除してください。');
+    return;
+  }
+  memos = nextMemos;
+  closeMemoModal();
+  renderMemos();
+});
+
+document.getElementById('deleteMemoBtn').addEventListener('click', ()=>{
+  if(!confirm('このメモを削除しますか？')) return;
+  memos = memos.filter(item=>item.id !== editingMemoId);
+  localStorage.setItem(MEMO_KEY, JSON.stringify(memos));
+  closeMemoModal();
+  renderMemos();
+});
 
 function setType(type){
   currentType = type;
@@ -1415,10 +1821,12 @@ document.getElementById('deleteBtn').addEventListener('click', ()=>{
 function createBackup(){
   return {
     app: 'kakeibo',
-    formatVersion: 1,
+    formatVersion: 3,
     exportedAt: new Date().toISOString(),
     transactions,
-    balances
+    balances,
+    memos,
+    budget
   };
 }
 
@@ -1432,7 +1840,7 @@ async function exportBackup(){
     try{
       await navigator.share({
         title: '家計簿バックアップ',
-        text: '家計簿の記録と残高設定のバックアップです。',
+        text: '家計簿の記録・メモ・画像・残高・予算設定のバックアップです。',
         files: [file]
       });
       return;
@@ -1483,8 +1891,44 @@ function validateBackup(data){
     throw new Error('残高設定が壊れています。');
   }
 
+  const restoredMemos = (Array.isArray(data.memos) ? data.memos : []).map((item, index)=>{
+    const amount = Number(item.amount || 0);
+    const id = Number(item.id);
+    const url = KakeiboCore.safeHttpUrl(item.url);
+    if(!String(item.title || '').trim() || !Number.isFinite(amount) || amount < 0 || (item.url && !url)){
+      throw new Error(`${index + 1}件目のメモが壊れています。`);
+    }
+    const image = typeof item.image === 'string' && item.image.startsWith('data:image/') ? item.image : '';
+    return {
+      id: Number.isFinite(id) ? id : Date.now() + index,
+      title: String(item.title).trim(), amount, url, image,
+      text: String(item.text || '')
+    };
+  });
+  const budgetData = data.budget || {};
+  const restoredBudget = {
+    enabled: budgetData.enabled === true,
+    mode: budgetData.mode === 'payday' ? 'payday' : 'calendar',
+    payday: Number.isInteger(Number(budgetData.payday)) && Number(budgetData.payday) >= 1 && Number(budgetData.payday) <= 31 ? Number(budgetData.payday) : 25,
+    holidayAdjustment: ['previous', 'next', 'none'].includes(budgetData.holidayAdjustment) ? budgetData.holidayAdjustment : 'previous',
+    entries: {}
+  };
+  for(const [key, entry] of Object.entries(budgetData.entries || {})){
+    const salary = Number(entry.salary);
+    const savingsGoal = Number(entry.savingsGoal);
+    const carryOverride = entry.carryOverride == null ? null : Number(entry.carryOverride);
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(key) || !Number.isFinite(salary) || salary < 0 ||
+       !Number.isFinite(savingsGoal) || savingsGoal < 0 || savingsGoal > salary ||
+       (carryOverride !== null && !Number.isFinite(carryOverride))){
+      throw new Error('予算設定が壊れています。');
+    }
+    restoredBudget.entries[key] = {salary, savingsGoal, carryOverride, carryFrom: KakeiboCore.shiftMonth(key, -1)};
+  }
+
   return {
     transactions: restoredTransactions,
+    memos: restoredMemos,
+    budget: restoredBudget,
     balances: {
       cashInitial,
       bankInitial,
@@ -1497,13 +1941,22 @@ async function importBackup(file){
   try{
     const data = JSON.parse(await file.text());
     const restored = validateBackup(data);
-    if(!confirm('現在の記録と残高設定を、バックアップの内容で置き換えますか？')) return;
+    if(!confirm('現在の記録・メモ・画像・残高・予算設定を、バックアップの内容で置き換えますか？')) return;
 
     transactions = restored.transactions;
+    memos = restored.memos;
+    budget = restored.budget;
     balances = restored.balances;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+    localStorage.setItem(MEMO_KEY, JSON.stringify(memos));
+    localStorage.setItem(BUDGET_KEY, JSON.stringify(budget));
     localStorage.setItem(BALANCE_KEY, JSON.stringify(balances));
     document.getElementById('settingsOverlay').classList.remove('open');
+    document.getElementById('budgetTab').hidden = !budget.enabled;
+    document.getElementById('viewSwitch').style.gridTemplateColumns = budget.enabled ? 'repeat(5,1fr)' : 'repeat(4,1fr)';
+    budgetViewKey = null;
+    reportViewKey = null;
+    if(!budget.enabled && viewMode === 'budget') document.querySelector('#viewSwitch [data-view="list"]').click();
     renderAll();
     alert('バックアップを復元しました。');
   } catch(error){
@@ -1523,6 +1976,12 @@ function updateBalanceSettingsTotal(){
   const cash = Number(document.getElementById('cashBalanceInput').value || 0);
   const bank = Number(document.getElementById('bankBalanceInput').value || 0);
   document.getElementById('balanceSettingsTotal').textContent = yen(cash + bank);
+  const current = computeBalances();
+  const changes = KakeiboCore.reconciliationEntries(current, {cash, bank}, todayStr(), 1);
+  document.getElementById('balanceDifferencePreview').textContent = changes.length
+    ? changes.map(item=>item.type === 'transfer' ? `銀行→現金の振替 ${yen(item.amount)}` :
+      `${item.source === 'cash' ? '現金' : '銀行'}：${item.type === 'expense' ? '未記録の支出' : '未記録の収入'} ${yen(item.amount)}`).join('／')
+    : '差額はありません。';
 }
 
 function showTutorialPage(step){
@@ -1545,6 +2004,7 @@ function openTutorial(){
 function closeTutorial(){
   localStorage.setItem(TUTORIAL_KEY, '1');
   document.getElementById('tutorialOverlay').classList.remove('open');
+  setTimeout(promptCurrentBudget, 300);
 }
 
 document.getElementById('settingsBtn').addEventListener('click', ()=>{
@@ -1556,8 +2016,79 @@ document.getElementById('openBalanceSettingsBtn').addEventListener('click', ()=>
   const current = computeBalances();
   document.getElementById('cashBalanceInput').value = current.cash || '';
   document.getElementById('bankBalanceInput').value = current.bank || '';
+  document.getElementById('recordBalanceDifferenceInput').checked = false;
+  document.getElementById('balanceDifferenceFields').hidden = true;
+  document.getElementById('balanceDifferenceDateInput').value = todayStr();
+  document.getElementById('balanceDifferenceDateInput').max = todayStr();
   updateBalanceSettingsTotal();
   showSettingsPanel('balanceSettingsPanel');
+});
+
+document.getElementById('recordBalanceDifferenceInput').addEventListener('change', event=>{
+  document.getElementById('balanceDifferenceFields').hidden = !event.target.checked;
+  updateBalanceSettingsTotal();
+});
+
+document.getElementById('openBudgetSettingsBtn').addEventListener('click', ()=>{
+  document.getElementById('budgetEnabledInput').checked = budget.enabled;
+  document.getElementById('budgetModeInput').value = budget.mode;
+  document.getElementById('budgetPaydayInput').value = budget.payday;
+  document.getElementById('budgetHolidayInput').value = budget.holidayAdjustment;
+  showSettingsPanel('budgetSettingsPanel');
+});
+
+document.getElementById('saveBudgetSettingsBtn').addEventListener('click', ()=>{
+  const payday = Number(document.getElementById('budgetPaydayInput').value);
+  if(!Number.isInteger(payday) || payday < 1 || payday > 31){ alert('給料日は1〜31日で入力してください。'); return; }
+  const mode = document.getElementById('budgetModeInput').value;
+  const adjustment = document.getElementById('budgetHolidayInput').value;
+  const changedPeriod = budget.mode !== mode || budget.payday !== payday || budget.holidayAdjustment !== adjustment;
+  if(changedPeriod && Object.keys(budget.entries).length && !confirm('月の区切りを変更すると、保存済みの各期間の支出と繰越額が再計算されます。変更しますか？')) return;
+  budget.enabled = document.getElementById('budgetEnabledInput').checked;
+  budget.mode = mode;
+  budget.payday = payday;
+  budget.holidayAdjustment = adjustment;
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(budget));
+  document.getElementById('budgetTab').hidden = !budget.enabled;
+  document.getElementById('viewSwitch').style.gridTemplateColumns = budget.enabled ? 'repeat(5,1fr)' : 'repeat(4,1fr)';
+  if(!budget.enabled && viewMode === 'budget') document.querySelector('#viewSwitch [data-view="list"]').click();
+  budgetViewKey = currentBudgetPeriod().key;
+  showSettingsPanel('settingsHome');
+  renderAll();
+  if(budget.enabled && !budget.entries[currentBudgetPeriod().key]){
+    document.getElementById('settingsOverlay').classList.remove('open');
+    setTimeout(promptCurrentBudget, 100);
+  }
+});
+
+document.getElementById('saveBudgetEntryBtn').addEventListener('click', ()=>{
+  const salaryText = document.getElementById('budgetSalaryInput').value;
+  const savingsText = document.getElementById('budgetSavingsInput').value;
+  const carryText = document.getElementById('budgetCarryInput').value;
+  const salary = Number(salaryText);
+  const savingsGoal = Number(savingsText);
+  const carry = Number(carryText);
+  if(salaryText === '' || savingsText === '' || carryText === '' ||
+     !Number.isSafeInteger(salary) || salary < 0 || !Number.isSafeInteger(savingsGoal) ||
+     savingsGoal < 0 || savingsGoal > salary || !Number.isSafeInteger(carry)){
+    alert('給料・貯金目標・繰越額を円単位の数字で入力してください。貯金目標は給料以下にしてください。');
+    return;
+  }
+  const previousKey = KakeiboCore.shiftMonth(editingBudgetKey, -1);
+  const previous = KakeiboCore.budgetSummary(previousKey, budget, budget.entries, transactions, isBankHoliday);
+  budget.entries[editingBudgetKey] = {
+    salary, savingsGoal,
+    carryOverride: carry === (previous?.remaining ?? 0) ? null : carry,
+    carryFrom: previousKey
+  };
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(budget));
+  document.getElementById('budgetEntryOverlay').classList.remove('open');
+  budgetViewKey = editingBudgetKey;
+  document.getElementById('budgetTab').click();
+});
+document.getElementById('cancelBudgetEntryBtn').addEventListener('click', ()=>document.getElementById('budgetEntryOverlay').classList.remove('open'));
+document.getElementById('budgetEntryOverlay').addEventListener('click', event=>{
+  if(event.target === event.currentTarget) event.currentTarget.classList.remove('open');
 });
 
 document.getElementById('openBackupSettingsBtn').addEventListener('click', ()=>{
@@ -1576,12 +2107,24 @@ document.querySelectorAll('.settingsBackBtn').forEach(button=>{
 document.getElementById('saveSettingsBtn').addEventListener('click', ()=>{
   const cash = Number(document.getElementById('cashBalanceInput').value);
   const bank = Number(document.getElementById('bankBalanceInput').value);
-  if(!Number.isFinite(cash) || !Number.isFinite(bank)){
-    alert('残高を数字で入力してください。');
+  if(!Number.isSafeInteger(cash) || !Number.isSafeInteger(bank)){
+    alert('残高を円単位の数字で入力してください。');
     return;
   }
-  balances = KakeiboCore.initialBalancesForCurrent({cash, bank}, transactions);
-  localStorage.setItem(BALANCE_KEY, JSON.stringify(balances));
+  if(document.getElementById('recordBalanceDifferenceInput').checked){
+    const date = document.getElementById('balanceDifferenceDateInput').value;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > todayStr()){
+      alert('今日以前の日付を選択してください。');
+      return;
+    }
+    const firstId = transactions.reduce((max, item)=>Math.max(max, Number(item.id) || 0), Date.now()) + 1;
+    const changes = KakeiboCore.reconciliationEntries(computeBalances(), {cash, bank}, date, firstId);
+    transactions.push(...changes);
+    save();
+  } else {
+    balances = KakeiboCore.initialBalancesForCurrent({cash, bank}, transactions);
+    localStorage.setItem(BALANCE_KEY, JSON.stringify(balances));
+  }
   document.getElementById('settingsOverlay').classList.remove('open');
   renderAll();
 });
@@ -1608,15 +2151,30 @@ document.getElementById('backupFileInput').addEventListener('change', e=>{
 
 document.getElementById('cancelSettingsBtn').addEventListener('click', ()=>{
   document.getElementById('settingsOverlay').classList.remove('open');
+  setTimeout(promptCurrentBudget, 100);
 });
 document.getElementById('settingsOverlay').addEventListener('click', e=>{ if(e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
 
 selectedDate = null;
+document.getElementById('budgetTab').hidden = !budget.enabled;
+document.getElementById('viewSwitch').style.gridTemplateColumns = budget.enabled ? 'repeat(5,1fr)' : 'repeat(4,1fr)';
 renderAll();
 if(!localStorage.getItem(TUTORIAL_KEY)) setTimeout(openTutorial, 250);
+else setTimeout(promptCurrentBudget, 350);
 window.addEventListener('pageshow', ()=>setTimeout(checkForAppUpdate, 800));
 document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible') checkForAppUpdate();
+  if(document.visibilityState === 'visible'){
+    checkForAppUpdate();
+    if(budget.enabled){
+      budgetViewKey = currentBudgetPeriod().key;
+      renderAll();
+      setTimeout(promptCurrentBudget, 300);
+    }
+    if(viewMode === 'report'){
+      reportViewKey = todayStr().slice(0, 7);
+      renderReport();
+    }
+  }
 });
 </script>
 </body>
