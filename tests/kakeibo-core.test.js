@@ -54,3 +54,17 @@ test('negative balances are supported', ()=>{
   const initial = initialBalancesForCurrent({cash: -500, bank: -1200}, []);
   assert.deepEqual(computeBalances(initial, []), {cash: -500, bank: -1200, total: -1700});
 });
+
+test('a bank-to-cash transfer moves money without changing the total balance', ()=>{
+  const transactions = [{type: 'transfer', source: 'bank', amount: 10000}];
+  assert.deepEqual(
+    computeBalances({cashInitial: 5000, bankInitial: 50000}, transactions),
+    {cash: 15000, bank: 40000, total: 55000}
+  );
+});
+
+test('reconciling balances also accounts for existing transfers', ()=>{
+  const transactions = [{type: 'transfer', source: 'bank', amount: 7000}];
+  const initial = initialBalancesForCurrent({cash: 12000, bank: 43000}, transactions);
+  assert.deepEqual(computeBalances(initial, transactions), {cash: 12000, bank: 43000, total: 55000});
+});

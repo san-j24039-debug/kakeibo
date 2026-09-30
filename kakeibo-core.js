@@ -11,7 +11,12 @@
   function transactionTotals(transactions){
     return (Array.isArray(transactions) ? transactions : []).reduce((totals, transaction)=>{
       const amount = finiteNumber(transaction.amount);
-      if(amount <= 0 || !['income', 'expense'].includes(transaction.type)) return totals;
+      if(amount <= 0 || !['income', 'expense', 'transfer'].includes(transaction.type)) return totals;
+      if(transaction.type === 'transfer'){
+        totals.bank -= amount;
+        totals.cash += amount;
+        return totals;
+      }
       const change = transaction.type === 'income' ? amount : -amount;
       if(transaction.source === 'bank') totals.bank += change;
       else totals.cash += change;

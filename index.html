@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家計簿">
 <meta name="theme-color" content="#22281F">
-<meta name="app-version" content="2026.09.30.1">
+<meta name="app-version" content="2026.09.30.2">
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-v2-180.png">
 <link rel="manifest" href="./manifest.webmanifest?v=2">
 <link rel="icon" type="image/png" sizes="192x192" href="./assets/app-icon-v2-192.png">
@@ -233,6 +233,7 @@
   }
   .tx.income .tx-icon{background:var(--income-bg);}
   .tx.expense .tx-icon{background:var(--expense-bg);}
+  .tx.transfer .tx-icon{background:#E8EDF3;}
   .tx-main{flex:1;min-width:0;}
   .tx-place{font-size:14.5px;font-weight:600;color:var(--ink);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -253,6 +254,7 @@
   }
   .tx.income .tx-amount{color:var(--income);}
   .tx.expense .tx-amount{color:var(--expense);}
+  .tx.transfer .tx-amount{color:#48647A;}
 
   .empty{
     text-align:center;
@@ -440,6 +442,7 @@
     gap:6px;
     margin-bottom:16px;
   }
+  .seg.type-seg{grid-template-columns:repeat(3,1fr);}
   .seg button{
     padding:10px 4px;
     border-radius:10px;
@@ -459,6 +462,11 @@
     background:var(--income-bg);
     color:var(--income);
     border-color:var(--income);
+  }
+  .seg button.active.transfer{
+    background:#E8EDF3;
+    color:#48647A;
+    border-color:#48647A;
   }
 
   .field{margin-bottom:14px;}
@@ -710,6 +718,7 @@
       <button class="tab active" data-filter="all">すべて</button>
       <button class="tab" data-filter="expense">支出</button>
       <button class="tab" data-filter="income">収入</button>
+      <button class="tab" data-filter="transfer">振替</button>
     </div>
     <div id="list"></div>
   </div>
@@ -737,9 +746,10 @@
   <div class="sheet">
     <h2 id="modalTitle">記録を追加</h2>
 
-    <div class="seg" id="typeSeg">
+    <div class="seg type-seg" id="typeSeg">
       <button type="button" class="active expense" data-type="expense">支出</button>
-      <button type="button" data-type="income">収入</button>
+      <button type="button" class="income" data-type="income">収入</button>
+      <button type="button" class="transfer" data-type="transfer">銀行→現金</button>
     </div>
 
     <div id="sourceRow" class="seg">
@@ -1040,7 +1050,7 @@ function fmtDateLabel(dateStr){
   return `${md}（${wd}）`;
 }
 
-const ICONS = {income:'💰', expense:'🧾'};
+const ICONS = {income:'💰', expense:'🧾', transfer:'🏧'};
 
 function escapeHtml(s){
   const d = document.createElement('div');
@@ -1049,8 +1059,8 @@ function escapeHtml(s){
 }
 
 function renderTxRow(t){
-  const sign = t.type === 'income' ? '+' : '−';
-  const sourceLabel = t.source === 'bank' ? '銀行' : '現金';
+  const sign = t.type === 'income' ? '+' : t.type === 'expense' ? '−' : '';
+  const sourceLabel = t.type === 'transfer' ? '銀行 → 現金' : t.source === 'bank' ? '銀行' : '現金';
   return `
     <div class="tx ${t.type}" data-tx-id="${t.id}">
       <div class="tx-icon">${ICONS[t.type]}</div>
@@ -1320,12 +1330,18 @@ function setType(type){
 
   const placeLabel = document.getElementById('placeLabel');
   const placeInput = document.getElementById('placeInput');
+  const sourceRow = document.getElementById('sourceRow');
+  sourceRow.hidden = type === 'transfer';
   if(type === 'expense'){
     placeLabel.textContent = 'どこで（お店・内容）';
     placeInput.placeholder = '例）スーパー、コンビニ';
-  } else {
+  } else if(type === 'income') {
     placeLabel.textContent = '内容（お給料・お小遣いなど）';
     placeInput.placeholder = '例）お給料、お小遣い';
+  } else {
+    currentSource = 'bank';
+    placeLabel.textContent = '内容';
+    placeInput.placeholder = '例）ATM引き出し';
   }
 }
 document.getElementById('typeSeg').addEventListener('click', e=>{
@@ -1443,7 +1459,7 @@ function validateBackup(data){
   const restoredTransactions = data.transactions.map((item, index)=>{
     const amount = Number(item.amount);
     const id = Number(item.id);
-    if(!['income','expense'].includes(item.type) ||
+    if(!['income','expense','transfer'].includes(item.type) ||
        !Number.isFinite(amount) || amount <= 0 ||
        !/^\d{4}-\d{2}-\d{2}$/.test(item.date || '')){
       throw new Error(`${index + 1}件目の記録が壊れています。`);
