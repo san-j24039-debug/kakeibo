@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家計簿">
 <meta name="theme-color" content="#22281F">
-<meta name="app-version" content="2026.06.21.10">
+<meta name="app-version" content="2026.09.30.1">
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-v2-180.png">
 <link rel="manifest" href="./manifest.webmanifest?v=2">
 <link rel="icon" type="image/png" sizes="192x192" href="./assets/app-icon-v2-192.png">
@@ -778,7 +778,7 @@
           <span class="settings-menu-icon">¥</span>
           <span class="settings-menu-copy">
             <span class="settings-menu-title">残高を設定する</span>
-            <span class="settings-menu-desc">手持ち残高と銀行残高を変更</span>
+            <span class="settings-menu-desc">今の実際の残高に合わせる</span>
           </span>
           <span class="settings-menu-arrow">›</span>
         </button>
@@ -816,7 +816,7 @@
         <span>合計残高</span>
         <strong id="balanceSettingsTotal">¥0</strong>
       </div>
-      <div class="hint">手持ち残高と銀行残高を自動で足して表示します。</div>
+      <div class="hint">現在の実際の残高を入力してください。記録を付け忘れた場合も、ここで残高を合わせ直せます。</div>
       <button class="save-btn" id="saveSettingsBtn">保存する</button>
       <button class="cancel-btn settingsBackBtn" type="button">設定に戻る</button>
     </div>
@@ -893,18 +893,15 @@
   </div>
 </div>
 
+<script src="./kakeibo-core.js"></script>
 <script>
 const APP_VERSION = document.querySelector('meta[name="app-version"]').content;
 const STORAGE_KEY = 'kakeibo_transactions_v1';
 const BALANCE_KEY = 'kakeibo_balances_v1';
 const TUTORIAL_KEY = 'kakeibo_tutorial_seen_v1';
 let transactions = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-let balances = JSON.parse(localStorage.getItem(BALANCE_KEY) || '{"totalInitial":0,"bankInitial":0}');
-if(!Object.prototype.hasOwnProperty.call(balances, 'cashInitial')){
-  const legacyBank = Number(balances.bankInitial || 0);
-  balances.cashInitial = Number(balances.totalInitial || 0) - legacyBank;
-  balances.bankInitial = legacyBank;
-  balances.totalInitial = balances.cashInitial + balances.bankInitial;
+let balances = KakeiboCore.normalizeBalances(JSON.parse(localStorage.getItem(BALANCE_KEY) || '{}'));
+if(localStorage.getItem(BALANCE_KEY) && !Object.prototype.hasOwnProperty.call(JSON.parse(localStorage.getItem(BALANCE_KEY)), 'cashInitial')){
   localStorage.setItem(BALANCE_KEY, JSON.stringify(balances));
 }
 let currentType = 'expense';
@@ -1029,18 +1026,7 @@ function save(){
 }
 
 function computeBalances(){
-  let cash = Number(balances.cashInitial || 0);
-  let bank = Number(balances.bankInitial || 0);
-  transactions.forEach(t=>{
-    if(t.type === 'income'){
-      if(t.source === 'bank') bank += t.amount;
-      else cash += t.amount;
-    } else if(t.type === 'expense'){
-      if(t.source === 'bank') bank -= t.amount;
-      else cash -= t.amount;
-    }
-  });
-  return {total: cash + bank, bank, cash};
+  return KakeiboCore.computeBalances(balances, transactions);
 }
 
 function fmtDateLabel(dateStr){
@@ -1551,8 +1537,9 @@ document.getElementById('settingsBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('openBalanceSettingsBtn').addEventListener('click', ()=>{
-  document.getElementById('cashBalanceInput').value = balances.cashInitial || '';
-  document.getElementById('bankBalanceInput').value = balances.bankInitial || '';
+  const current = computeBalances();
+  document.getElementById('cashBalanceInput').value = current.cash || '';
+  document.getElementById('bankBalanceInput').value = current.bank || '';
   updateBalanceSettingsTotal();
   showSettingsPanel('balanceSettingsPanel');
 });
@@ -1573,9 +1560,11 @@ document.querySelectorAll('.settingsBackBtn').forEach(button=>{
 document.getElementById('saveSettingsBtn').addEventListener('click', ()=>{
   const cash = Number(document.getElementById('cashBalanceInput').value);
   const bank = Number(document.getElementById('bankBalanceInput').value);
-  balances.cashInitial = cash;
-  balances.bankInitial = bank;
-  balances.totalInitial = cash + bank;
+  if(!Number.isFinite(cash) || !Number.isFinite(bank)){
+    alert('残高を数字で入力してください。');
+    return;
+  }
+  balances = KakeiboCore.initialBalancesForCurrent({cash, bank}, transactions);
   localStorage.setItem(BALANCE_KEY, JSON.stringify(balances));
   document.getElementById('settingsOverlay').classList.remove('open');
   renderAll();
