@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家計簿">
 <meta name="theme-color" content="#22281F">
-<meta name="app-version" content="2026.10.24.1">
+<meta name="app-version" content="2026.10.24.2">
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-v2-180.png">
 <link rel="manifest" href="./manifest.webmanifest?v=2">
 <link rel="icon" type="image/png" sizes="192x192" href="./assets/app-icon-v2-192.png">
@@ -983,7 +983,8 @@
 <div class="overlay" id="budgetEntryOverlay">
   <div class="sheet">
     <h2 id="budgetEntryTitle">今月の予算</h2>
-    <div class="field"><label for="budgetAmountInput">この期間に使ってよい金額</label><input type="number" id="budgetAmountInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="例：50000"></div>
+    <div class="field"><label for="budgetAmountInput">この期間の支出上限額</label><input type="number" id="budgetAmountInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="例：100000"></div>
+    <div class="hint">例：15万円あり、10万円まで使ってよいなら「100000」と入力。残り5万円ではありません。</div>
     <div class="hint" id="budgetAmountHint">給料や貯金目標の入力は不要です。前の期間からの繰越は別に加算されます。</div>
     <details id="budgetDetails"><summary>給料・貯金目標・繰越を調整</summary>
       <div class="field"><label for="budgetSalaryInput">給料（任意）</label><input type="number" id="budgetSalaryInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="未入力でも保存できます"></div>
@@ -1485,13 +1486,13 @@ function renderBudget(){
   const content = document.getElementById('budgetContent');
   const summary = KakeiboCore.budgetSummary(key, budget, budget.entries, transactions, isBankHoliday);
   if(!summary){
-    content.innerHTML = `<div class="budget-card"><div class="budget-note">${key === currentKey ? '今月' : budgetMonthLabel(key)}の予算は未設定です。</div><button class="save-btn" id="editBudgetEntryBtn" type="button">使ってよい金額を設定</button></div>`;
+    content.innerHTML = `<div class="budget-card"><div class="budget-note">${key === currentKey ? '今月' : budgetMonthLabel(key)}の予算は未設定です。</div><button class="save-btn" id="editBudgetEntryBtn" type="button">支出の上限額を設定</button></div>`;
   } else {
     const over = summary.remaining < 0;
     const percent = summary.limit > 0 ? Math.round(summary.spent / summary.limit * 100) : (summary.spent > 0 ? 100 : 0);
     const carrySign = summary.carry > 0 ? '+' : '';
     const rows = [
-      ['設定した使用予算', yen(summary.baseLimit)],
+      ['設定した支出上限額', yen(summary.baseLimit)],
       [`${budgetMonthLabel(summary.carryFrom)}からの繰越`, `${carrySign}${yen(summary.carry)}`],
       ['使ってよい合計', yen(summary.limit)],
       ['使用済み', yen(summary.spent)]
@@ -1506,7 +1507,7 @@ function renderBudget(){
     const note = over ? `使用予算を${yen(-summary.remaining)}超過。${summary.savingsGoal === null ? '予算額はいつでも変更できます。' : `貯金目標から${yen(Math.min(summary.savingsGoal, summary.plannedSavingsShortfall - summary.remaining))}使用しています。`}` :
       summary.plannedSavingsShortfall ? `設定した予算が給料と貯金目標から計算した額を${yen(summary.plannedSavingsShortfall)}上回っています。` :
       `${Math.max(0, percent)}%使用。残額は次の期間へ繰り越せます。`;
-    content.innerHTML = `<div class="budget-card ${over ? 'over' : ''}"><div class="budget-main-label">${over ? '使用予算を超過' : 'あと使える金額'}</div><div class="budget-main-amount">${yen(Math.abs(summary.remaining))}</div><button class="small-btn" id="editBudgetEntryBtn" type="button">この期間の予算を変更</button><div class="budget-period">${summary.start} 〜 ${new Date(new Date(summary.end+'T12:00:00').getTime()-86400000).toLocaleDateString('ja-JP')}</div><div class="budget-progress"><span style="width:${Math.min(100, Math.max(0, percent))}%"></span></div><div class="budget-note">${note}</div>${rows.map(([label,value])=>`<div class="budget-row"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div>`;
+    content.innerHTML = `<div class="budget-card ${over ? 'over' : ''}"><div class="budget-main-label">${over ? '使用予算を超過' : 'あと使える金額（自動計算）'}</div><div class="budget-main-amount">${yen(Math.abs(summary.remaining))}</div><button class="small-btn" id="editBudgetEntryBtn" type="button">支出の上限額を変更</button><div class="budget-period">${summary.start} 〜 ${new Date(new Date(summary.end+'T12:00:00').getTime()-86400000).toLocaleDateString('ja-JP')}</div><div class="budget-progress"><span style="width:${Math.min(100, Math.max(0, percent))}%"></span></div><div class="budget-note">${note}</div>${rows.map(([label,value])=>`<div class="budget-row"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div>`;
   }
   document.getElementById('editBudgetEntryBtn').addEventListener('click', ()=>openBudgetEntry(key));
 }
