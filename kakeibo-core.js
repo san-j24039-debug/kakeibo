@@ -123,17 +123,22 @@
     const previous = entries[previousKey]
       ? budgetSummary(previousKey, settings, entries, transactions, isHoliday) : null;
     const carry = entry.carryOverride == null ? (previous?.remaining || 0) : Number(entry.carryOverride);
-    const salary = Number(entry.salary);
-    const savingsGoal = Number(entry.savingsGoal);
+    const salary = entry.salary == null ? null : Number(entry.salary);
+    const savingsGoal = entry.savingsGoal == null ? null : Number(entry.savingsGoal);
     const spent = transactions.reduce((sum, item)=>{
       return item.type === 'expense' && item.date >= start && item.date < end
         ? sum + Number(item.amount) : sum;
     }, 0);
-    const limit = salary - savingsGoal + carry;
+    const baseLimit = entry.baseLimit == null ? salary - savingsGoal : Number(entry.baseLimit);
+    const limit = baseLimit + carry;
     const remaining = limit - spent;
-    const savingsEstimate = Math.max(0, savingsGoal - Math.max(0, -remaining));
-    return {key, start, end, salary, savingsGoal, carry, carryFrom: entry.carryFrom || previousKey,
-      limit, spent, remaining, savingsEstimate, shortage: Math.max(0, -remaining - savingsGoal)};
+    const plannedSavingsShortfall = salary === null || savingsGoal === null ? 0 :
+      Math.max(0, baseLimit - (salary - savingsGoal));
+    const savingsEstimate = savingsGoal == null ? null :
+      Math.max(0, savingsGoal - plannedSavingsShortfall - Math.max(0, -remaining));
+    return {key, start, end, salary, savingsGoal, baseLimit, carry, carryFrom: entry.carryFrom || previousKey,
+      limit, spent, remaining, savingsEstimate, plannedSavingsShortfall,
+      shortage:savingsGoal == null ? 0 : Math.max(0, plannedSavingsShortfall - savingsGoal - remaining)};
   }
 
   function calendarMonthReport(key, transactions){

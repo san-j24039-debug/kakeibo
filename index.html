@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家計簿">
 <meta name="theme-color" content="#22281F">
-<meta name="app-version" content="2026.10.01.1">
+<meta name="app-version" content="2026.10.24.1">
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-v2-180.png">
 <link rel="manifest" href="./manifest.webmanifest?v=2">
 <link rel="icon" type="image/png" sizes="192x192" href="./assets/app-icon-v2-192.png">
@@ -730,6 +730,10 @@
   .budget-actions{display:flex;gap:8px;}
   .budget-actions button{flex:1;}
   #budgetEnabledInput{width:20px;height:20px;vertical-align:middle;}
+  #budgetDetails{margin:12px 0 16px;}
+  #budgetDetails summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--ink-soft);padding:10px 0;}
+  #budgetDetails .field:first-of-type{margin-top:12px;}
+  .budget-card .small-btn{margin:2px 0 12px;}
   #reportContent{flex:1;min-height:0;overflow-y:auto;padding-bottom:calc(100px + env(safe-area-inset-bottom, 0px));}
   .report-hero{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:12px;}
   .report-metric{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px;}
@@ -906,7 +910,7 @@
         </button>
         <button class="settings-menu-btn" id="openBudgetSettingsBtn" type="button">
           <span class="settings-menu-icon">◉</span>
-          <span class="settings-menu-copy"><span class="settings-menu-title">予算管理</span><span class="settings-menu-desc">使用限度額・給料日・貯金目標</span></span>
+          <span class="settings-menu-copy"><span class="settings-menu-title">予算管理</span><span class="settings-menu-desc">予算のON/OFF・給料日</span></span>
           <span class="settings-menu-arrow">›</span>
         </button>
         <button class="settings-menu-btn" id="openBackupSettingsBtn" type="button">
@@ -979,10 +983,14 @@
 <div class="overlay" id="budgetEntryOverlay">
   <div class="sheet">
     <h2 id="budgetEntryTitle">今月の予算</h2>
-    <div class="field"><label for="budgetSalaryInput">今月の給料（予定）</label><input type="number" id="budgetSalaryInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="0"></div>
-    <div class="field"><label for="budgetSavingsInput">貯金目標</label><input type="number" id="budgetSavingsInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="0"></div>
-    <div class="field"><label for="budgetCarryInput">前の期間からの繰越（マイナスも可）</label><input type="number" id="budgetCarryInput" class="amount-input" step="1" inputmode="numeric" placeholder="0"></div>
-    <div class="hint" id="budgetCarryHint"></div>
+    <div class="field"><label for="budgetAmountInput">この期間に使ってよい金額</label><input type="number" id="budgetAmountInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="例：50000"></div>
+    <div class="hint" id="budgetAmountHint">給料や貯金目標の入力は不要です。前の期間からの繰越は別に加算されます。</div>
+    <details id="budgetDetails"><summary>給料・貯金目標・繰越を調整</summary>
+      <div class="field"><label for="budgetSalaryInput">給料（任意）</label><input type="number" id="budgetSalaryInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="未入力でも保存できます"></div>
+      <div class="field"><label for="budgetSavingsInput">貯金目標（任意）</label><input type="number" id="budgetSavingsInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="未入力でも保存できます"></div>
+      <div class="field"><label for="budgetCarryInput">前の期間からの繰越（マイナスも可）</label><input type="number" id="budgetCarryInput" class="amount-input" step="1" inputmode="numeric" placeholder="0"></div>
+      <div class="hint" id="budgetCarryHint"></div>
+    </details>
     <button class="save-btn" id="saveBudgetEntryBtn" type="button">保存する</button>
     <button class="cancel-btn" id="cancelBudgetEntryBtn" type="button">あとで設定</button>
   </div>
@@ -1477,23 +1485,28 @@ function renderBudget(){
   const content = document.getElementById('budgetContent');
   const summary = KakeiboCore.budgetSummary(key, budget, budget.entries, transactions, isBankHoliday);
   if(!summary){
-    content.innerHTML = `<div class="budget-card"><div class="budget-note">${key === currentKey ? '今月' : budgetMonthLabel(key)}の予算は未設定です。</div><button class="save-btn" id="editBudgetEntryBtn" type="button">給料と貯金目標を設定</button></div>`;
+    content.innerHTML = `<div class="budget-card"><div class="budget-note">${key === currentKey ? '今月' : budgetMonthLabel(key)}の予算は未設定です。</div><button class="save-btn" id="editBudgetEntryBtn" type="button">使ってよい金額を設定</button></div>`;
   } else {
     const over = summary.remaining < 0;
     const percent = summary.limit > 0 ? Math.round(summary.spent / summary.limit * 100) : (summary.spent > 0 ? 100 : 0);
     const carrySign = summary.carry > 0 ? '+' : '';
     const rows = [
-      ['今月の給料', yen(summary.salary)],
-      ['貯金目標', yen(summary.savingsGoal)],
-      ['基本使用限度額', yen(summary.salary - summary.savingsGoal)],
+      ['設定した使用予算', yen(summary.baseLimit)],
       [`${budgetMonthLabel(summary.carryFrom)}からの繰越`, `${carrySign}${yen(summary.carry)}`],
-      ['今月の使用限度額', yen(summary.limit)],
-      ['使用済み', yen(summary.spent)],
-      ['貯金見込み', yen(summary.savingsEstimate)]
+      ['使ってよい合計', yen(summary.limit)],
+      ['使用済み', yen(summary.spent)]
     ];
+    if(summary.salary !== null) rows.push(['給料（予定）', yen(summary.salary)]);
+    if(summary.savingsGoal !== null) rows.push(['貯金目標', yen(summary.savingsGoal)]);
+    if(summary.savingsEstimate !== null) rows.push(['貯金見込み', yen(summary.savingsEstimate)]);
+    if(summary.salary !== null && summary.savingsGoal !== null && summary.salary > summary.savingsGoal + summary.baseLimit){
+      rows.push(['予算・貯金目標とは別に残す額', yen(summary.salary - summary.savingsGoal - summary.baseLimit)]);
+    }
     if(summary.shortage) rows.push(['貯金目標を超えた不足', yen(summary.shortage)]);
-    const note = over ? `使用限度額を${yen(-summary.remaining)}超過。貯金目標から${yen(Math.min(summary.savingsGoal, -summary.remaining))}使用しています。` : `${Math.max(0, percent)}%使用。残額は次の期間へ繰り越せます。`;
-    content.innerHTML = `<div class="budget-card ${over ? 'over' : ''}"><div class="budget-main-label">${over ? '使用限度額を超過' : 'あと使える金額'}</div><div class="budget-main-amount">${yen(Math.abs(summary.remaining))}</div><div class="budget-period">${summary.start} 〜 ${new Date(new Date(summary.end+'T12:00:00').getTime()-86400000).toLocaleDateString('ja-JP')}</div><div class="budget-progress"><span style="width:${Math.min(100, Math.max(0, percent))}%"></span></div><div class="budget-note">${note}</div>${rows.map(([label,value])=>`<div class="budget-row"><span>${label}</span><strong>${value}</strong></div>`).join('')}<button class="save-btn" id="editBudgetEntryBtn" type="button">この期間の設定を変更</button></div>`;
+    const note = over ? `使用予算を${yen(-summary.remaining)}超過。${summary.savingsGoal === null ? '予算額はいつでも変更できます。' : `貯金目標から${yen(Math.min(summary.savingsGoal, summary.plannedSavingsShortfall - summary.remaining))}使用しています。`}` :
+      summary.plannedSavingsShortfall ? `設定した予算が給料と貯金目標から計算した額を${yen(summary.plannedSavingsShortfall)}上回っています。` :
+      `${Math.max(0, percent)}%使用。残額は次の期間へ繰り越せます。`;
+    content.innerHTML = `<div class="budget-card ${over ? 'over' : ''}"><div class="budget-main-label">${over ? '使用予算を超過' : 'あと使える金額'}</div><div class="budget-main-amount">${yen(Math.abs(summary.remaining))}</div><button class="small-btn" id="editBudgetEntryBtn" type="button">この期間の予算を変更</button><div class="budget-period">${summary.start} 〜 ${new Date(new Date(summary.end+'T12:00:00').getTime()-86400000).toLocaleDateString('ja-JP')}</div><div class="budget-progress"><span style="width:${Math.min(100, Math.max(0, percent))}%"></span></div><div class="budget-note">${note}</div>${rows.map(([label,value])=>`<div class="budget-row"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div>`;
   }
   document.getElementById('editBudgetEntryBtn').addEventListener('click', ()=>openBudgetEntry(key));
 }
@@ -1504,9 +1517,13 @@ function openBudgetEntry(key){
   const previousKey = KakeiboCore.shiftMonth(key, -1);
   const previous = KakeiboCore.budgetSummary(previousKey, budget, budget.entries, transactions, isBankHoliday);
   document.getElementById('budgetEntryTitle').textContent = `${budgetMonthLabel(key)}の予算`;
+  document.getElementById('budgetAmountInput').value = entry?.baseLimit ?? (entry && entry.salary != null && entry.savingsGoal != null ? Number(entry.salary) - Number(entry.savingsGoal) : '');
   document.getElementById('budgetSalaryInput').value = entry?.salary ?? '';
   document.getElementById('budgetSavingsInput').value = entry?.savingsGoal ?? '';
   document.getElementById('budgetCarryInput').value = entry?.carryOverride ?? previous?.remaining ?? 0;
+  document.getElementById('budgetDetails').open = false;
+  const carry = entry?.carryOverride ?? previous?.remaining ?? 0;
+  document.getElementById('budgetAmountHint').textContent = `繰越 ${yen(carry)} は、設定金額に加算されます。必要なら詳細設定から変更できます。`;
   document.getElementById('budgetCarryHint').textContent = `${budgetMonthLabel(previousKey)}の残額：${previous ? yen(previous.remaining) : '未設定'}。繰越額を変更すると、この期間の予算に反映されます。`;
   document.getElementById('budgetEntryOverlay').classList.add('open');
 }
@@ -1826,7 +1843,7 @@ document.getElementById('deleteBtn').addEventListener('click', ()=>{
 function createBackup(){
   return {
     app: 'kakeibo',
-    formatVersion: 3,
+    formatVersion: 4,
     exportedAt: new Date().toISOString(),
     transactions,
     balances,
@@ -1920,15 +1937,20 @@ function validateBackup(data){
     entries: {}
   };
   for(const [key, entry] of Object.entries(budgetData.entries || {})){
-    const salary = Number(entry.salary);
-    const savingsGoal = Number(entry.savingsGoal);
+    const salary = entry.salary == null ? null : Number(entry.salary);
+    const savingsGoal = entry.savingsGoal == null ? null : Number(entry.savingsGoal);
+    const baseLimit = entry.baseLimit == null ? null : Number(entry.baseLimit);
     const carryOverride = entry.carryOverride == null ? null : Number(entry.carryOverride);
-    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(key) || !Number.isFinite(salary) || salary < 0 ||
-       !Number.isFinite(savingsGoal) || savingsGoal < 0 || savingsGoal > salary ||
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(key) ||
+       (salary !== null && (!Number.isSafeInteger(salary) || salary < 0)) ||
+       (savingsGoal !== null && (!Number.isSafeInteger(savingsGoal) || savingsGoal < 0)) ||
+       (salary !== null && savingsGoal !== null && savingsGoal > salary) ||
+       (baseLimit !== null && (!Number.isSafeInteger(baseLimit) || baseLimit < 0)) ||
+       (baseLimit === null && (salary === null || savingsGoal === null)) ||
        (carryOverride !== null && !Number.isFinite(carryOverride))){
       throw new Error('予算設定が壊れています。');
     }
-    restoredBudget.entries[key] = {salary, savingsGoal, carryOverride, carryFrom: KakeiboCore.shiftMonth(key, -1)};
+    restoredBudget.entries[key] = {salary, savingsGoal, baseLimit, carryOverride, carryFrom: KakeiboCore.shiftMonth(key, -1)};
   }
 
   return {
@@ -2068,22 +2090,29 @@ document.getElementById('saveBudgetSettingsBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('saveBudgetEntryBtn').addEventListener('click', ()=>{
+  const amountText = document.getElementById('budgetAmountInput').value;
   const salaryText = document.getElementById('budgetSalaryInput').value;
   const savingsText = document.getElementById('budgetSavingsInput').value;
   const carryText = document.getElementById('budgetCarryInput').value;
-  const salary = Number(salaryText);
-  const savingsGoal = Number(savingsText);
+  const baseLimit = Number(amountText);
+  const salary = salaryText === '' ? null : Number(salaryText);
+  const savingsGoal = savingsText === '' ? null : Number(savingsText);
   const carry = Number(carryText);
-  if(salaryText === '' || savingsText === '' || carryText === '' ||
-     !Number.isSafeInteger(salary) || salary < 0 || !Number.isSafeInteger(savingsGoal) ||
-     savingsGoal < 0 || savingsGoal > salary || !Number.isSafeInteger(carry)){
-    alert('給料・貯金目標・繰越額を円単位の数字で入力してください。貯金目標は給料以下にしてください。');
+  if(amountText === '' || !Number.isSafeInteger(baseLimit) || baseLimit < 0){
+    alert('使ってよい金額を0円以上の整数で入力してください。');
+    return;
+  }
+  if((salary !== null && (!Number.isSafeInteger(salary) || salary < 0)) ||
+     (savingsGoal !== null && (!Number.isSafeInteger(savingsGoal) || savingsGoal < 0)) ||
+     (salary !== null && savingsGoal !== null && savingsGoal > salary) ||
+     !Number.isSafeInteger(carry)){
+    alert('詳細設定の金額を円単位の数字で入力してください。貯金目標は給料以下にしてください。');
     return;
   }
   const previousKey = KakeiboCore.shiftMonth(editingBudgetKey, -1);
   const previous = KakeiboCore.budgetSummary(previousKey, budget, budget.entries, transactions, isBankHoliday);
   budget.entries[editingBudgetKey] = {
-    salary, savingsGoal,
+    salary, savingsGoal, baseLimit,
     carryOverride: carry === (previous?.remaining ?? 0) ? null : carry,
     carryFrom: previousKey
   };

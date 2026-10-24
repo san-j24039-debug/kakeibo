@@ -265,3 +265,51 @@ test('forgotten expense enters the selected month and affects budget carry', ()=
   assert.equal(budgetSummary('2026-06', {mode:'calendar'}, budgetEntries, entries).remaining, 2000);
   assert.equal(budgetSummary('2026-07', {mode:'calendar'}, budgetEntries, entries).carry, 2000);
 });
+
+test('a directly entered spending budget does not require salary or savings fields', ()=>{
+  const settings = {mode:'calendar'};
+  const entries = {'2026-10':{baseLimit:50000, salary:null, savingsGoal:null, carryOverride:0}};
+  const spent = [{type:'expense',amount:5000,date:'2026-10-10'}];
+  const result = budgetSummary('2026-10', settings, entries, spent);
+  assert.equal(result.baseLimit, 50000);
+  assert.equal(result.remaining, 45000);
+  assert.equal(result.savingsEstimate, null);
+});
+
+test('changing the budget mid-period immediately updates the remaining amount and next carry', ()=>{
+  const settings = {mode:'calendar'};
+  const entries = {
+    '2026-10':{baseLimit:50000, salary:null, savingsGoal:null, carryOverride:0},
+    '2026-11':{baseLimit:40000, salary:null, savingsGoal:null, carryOverride:null}
+  };
+  const spent = [{type:'expense',amount:12000,date:'2026-10-15'}];
+  assert.equal(budgetSummary('2026-10', settings, entries, spent).remaining, 38000);
+  entries['2026-10'].baseLimit = 60000;
+  assert.equal(budgetSummary('2026-10', settings, entries, spent).remaining, 48000);
+  assert.equal(budgetSummary('2026-11', settings, entries, spent).carry, 48000);
+});
+
+test('older salary-minus-savings budgets retain their original limit', ()=>{
+  const old = {'2026-10':{salary:114063,savingsGoal:50000,carryOverride:0}};
+  const result = budgetSummary('2026-10', {mode:'calendar'}, old,
+    [{type:'expense',amount:5000,date:'2026-10-01'}]);
+  assert.equal(result.baseLimit, 64063);
+  assert.equal(result.remaining, 59063);
+  old['2026-10'].baseLimit = 50000;
+  assert.equal(budgetSummary('2026-10', {mode:'calendar'}, old,
+    [{type:'expense',amount:5000,date:'2026-10-01'}]).remaining, 45000);
+});
+
+test('a directly chosen budget can differ from salary minus savings goal', ()=>{
+  const entries = {'2026-10':{salary:100000,savingsGoal:50000,baseLimit:40000,carryOverride:0}};
+  const result = budgetSummary('2026-10', {mode:'calendar'}, entries,
+    [{type:'expense',amount:5000,date:'2026-10-08'}]);
+  assert.equal(result.remaining, 35000);
+  assert.equal(result.savingsEstimate, 50000);
+  entries['2026-10'].baseLimit = 60000;
+  const revised = budgetSummary('2026-10', {mode:'calendar'}, entries,
+    [{type:'expense',amount:5000,date:'2026-10-08'}]);
+  assert.equal(revised.remaining, 55000);
+  assert.equal(revised.plannedSavingsShortfall, 10000);
+  assert.equal(revised.savingsEstimate, 40000);
+});
