@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家計簿">
 <meta name="theme-color" content="#22281F">
-<meta name="app-version" content="2026.10.30.2">
+<meta name="app-version" content="2026.10.30.3">
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-v2-180.png">
 <link rel="manifest" href="./manifest.webmanifest?v=2">
 <link rel="icon" type="image/png" sizes="192x192" href="./assets/app-icon-v2-192.png">
@@ -1523,8 +1523,10 @@ function renderBudget(){
   const entry = budget.entries[key];
   if(entry?.floorBalance != null){
     const floor = KakeiboCore.balanceFloorSummary(key, budget, entry.floorBalance, balances, transactions, currentKey, isBankHoliday);
+    const period = KakeiboCore.periodMonthReport(key, budget, transactions, isBankHoliday);
+    const periodBalance = period.salary - period.expense;
     const over = floor.remaining < 0;
-    content.innerHTML = `<div class="budget-card ${over ? 'over' : ''}"><div class="budget-main-label">${over ? '残したい額を下回っています' : '今使える金額'}</div><div class="budget-main-amount">${yen(Math.abs(floor.remaining))}</div><button class="small-btn" id="editBudgetEntryBtn" type="button">残したい金額を変更</button><div class="budget-period">${floor.start} 〜 ${new Date(new Date(floor.end+'T12:00:00').getTime()-86400000).toLocaleDateString('ja-JP')}</div><div class="budget-note">${key === currentKey ? '現金と銀行の合計残高から自動計算しています。' : '記録から期間末の合計残高を推定しています。'}振替は使える額を変えません。</div><div class="budget-row"><span>${key === currentKey ? '現在の合計残高' : '期間末の合計残高（推定）'}</span><strong>${yen(floor.balance)}</strong></div><div class="budget-row"><span>残しておきたい金額</span><strong>${yen(floor.floor)}</strong></div><div class="budget-row"><span>この期間の支出</span><strong>${yen(floor.spent)}</strong></div></div>`;
+    content.innerHTML = `<div class="budget-card ${over ? 'over' : ''}"><div class="budget-main-label">${over ? '残したい額を下回っています' : '今使える金額'}</div><div class="budget-main-amount">${yen(Math.abs(floor.remaining))}</div><button class="small-btn" id="editBudgetEntryBtn" type="button">残したい金額を変更</button><div class="budget-period">${floor.start} 〜 ${new Date(new Date(floor.end+'T12:00:00').getTime()-86400000).toLocaleDateString('ja-JP')}</div><div class="budget-note">${key === currentKey ? '現金と銀行の合計残高から自動計算しています。' : '記録から期間末の合計残高を推定しています。'}振替は使える額を変えません。</div><div class="budget-row"><span>${key === currentKey ? '現在の合計残高' : '期間末の合計残高（推定）'}</span><strong>${yen(floor.balance)}</strong></div><div class="budget-row"><span>残しておきたい金額</span><strong>${yen(floor.floor)}</strong></div><div class="budget-row"><span>この期間の支出</span><strong>${yen(floor.spent)}</strong></div><div class="budget-row"><span>この期間の残高<br><small>給料 − 支出</small></span><strong>${periodBalance < 0 ? '−' : ''}${yen(Math.abs(periodBalance))}</strong></div></div>`;
     document.getElementById('editBudgetEntryBtn').addEventListener('click', ()=>openBudgetEntry(key));
     renderBudgetSteps(key, currentKey, content);
     return;
