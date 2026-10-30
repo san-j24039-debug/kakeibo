@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家計簿">
 <meta name="theme-color" content="#22281F">
-<meta name="app-version" content="2026.10.30.1">
+<meta name="app-version" content="2026.10.30.2">
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-v2-180.png">
 <link rel="manifest" href="./manifest.webmanifest?v=2">
 <link rel="icon" type="image/png" sizes="192x192" href="./assets/app-icon-v2-192.png">
@@ -731,6 +731,13 @@
   .budget-actions button{flex:1;}
   #budgetEnabledInput{width:20px;height:20px;vertical-align:middle;}
   .budget-card .small-btn{margin:2px 0 12px;}
+  .budget-steps{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;}
+  .budget-steps-title{font-size:14px;font-weight:800;margin-bottom:10px;}
+  .budget-step{padding:10px 0;border-top:1px solid var(--line);}
+  .budget-step-head{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:700;}
+  .budget-step-head strong{white-space:nowrap;}
+  .budget-step .budget-note{margin:4px 0 8px;}
+  .budget-step button{width:100%;}
   #reportContent{flex:1;min-height:0;overflow-y:auto;padding-bottom:calc(100px + env(safe-area-inset-bottom, 0px));}
   .report-hero{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:12px;}
   .report-metric{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px;}
@@ -840,6 +847,8 @@
       <label id="placeLabel">どこで（お店・内容）</label>
       <input type="text" id="placeInput" placeholder="例）スーパー、コンビニ" inputmode="text" enterkeyhint="next" autocomplete="off">
     </div>
+
+    <div class="field" id="salaryKindRow" hidden><label><input type="checkbox" id="salaryKindInput"> この収入は給料</label></div>
 
     <div class="field">
       <label>金額</label>
@@ -980,8 +989,8 @@
 <div class="overlay" id="budgetEntryOverlay">
   <div class="sheet">
     <h2 id="budgetEntryTitle">今月の予算</h2>
-    <div class="field"><label for="budgetAmountInput">残しておきたい合計残高</label><input type="number" id="budgetAmountInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="例：100000"></div>
-    <div class="hint">例：現金と銀行の合計が17万円で、10万円は残したいなら「100000」と入力。使える額は自動で7万円になります。</div>
+    <div class="field"><label for="budgetAmountInput">残高を何円まで減らしていい？</label><input type="number" id="budgetAmountInput" class="amount-input" min="0" step="1" inputmode="numeric" placeholder="例：100000"></div>
+    <div class="hint">例：現金と銀行の合計が17万円で、残高を10万円まで減らしてよいなら「100000」と入力。使える額は自動で7万円になります。</div>
     <div class="hint" id="budgetAmountHint"></div>
     <button class="save-btn" id="saveBudgetEntryBtn" type="button">保存する</button>
     <button class="cancel-btn" id="cancelBudgetEntryBtn" type="button">あとで設定</button>
@@ -1228,7 +1237,7 @@ function renderTxRow(t){
       <div class="tx-icon">${ICONS[t.type]}</div>
       <div class="tx-main">
         <div class="tx-place">${escapeHtml(t.place)}</div>
-        <div class="tx-meta"><span class="tx-source">${sourceLabel}</span></div>
+        <div class="tx-meta"><span class="tx-source">${sourceLabel}${KakeiboCore.isSalaryIncome(t) ? '・給料' : ''}</span></div>
       </div>
       <div class="tx-amount">${sign}${yen(t.amount)}</div>
     </div>`;
@@ -1251,6 +1260,7 @@ function loadEditModal(tx){
   document.getElementById('placeInput').value = tx.place;
   document.getElementById('amountInput').value = tx.amount;
   setType(tx.type);
+  document.getElementById('salaryKindInput').checked = KakeiboCore.isSalaryIncome(tx);
   currentSource = tx.source || 'cash';
   updateSourceButtons();
   document.getElementById('deleteBtn').style.display = 'block';
@@ -1424,12 +1434,12 @@ function renderAll(){
 }
 
 function renderReport(){
-  const currentKey = todayStr().slice(0, 7);
+  const currentKey = currentBudgetPeriod().key;
   reportViewKey ||= currentKey;
   const key = reportViewKey;
   document.getElementById('reportMonthTitle').textContent = budgetMonthLabel(key);
   document.getElementById('reportNextBtn').disabled = key >= currentKey;
-  const report = KakeiboCore.reportComparison(key, transactions);
+  const report = KakeiboCore.periodReportComparison(key, budget, transactions, isBankHoliday);
   const difference = report.difference;
   const differenceText = difference > 0 ? `先月より${yen(difference)}多い` :
     difference < 0 ? `先月より${yen(-difference)}少ない` : '先月と同じ';
@@ -1441,17 +1451,16 @@ function renderReport(){
   }).join('');
   document.getElementById('reportContent').innerHTML = `
     <div class="report-hero">
-      <div class="report-metric"><span>支出</span><strong>${yen(report.current.expense)}</strong></div>
-      <div class="report-metric"><span>収入</span><strong>${yen(report.current.income)}</strong></div>
-      <div class="report-metric"><span>収入から残った額</span><strong>${report.current.net >= 0 ? '+' : '−'}${yen(Math.abs(report.current.net))}</strong></div>
-      <div class="report-metric"><span>前月との差</span><strong>${difference === 0 ? '±' : difference > 0 ? '+' : '−'}${yen(Math.abs(difference))}</strong></div>
+      <div class="report-metric"><span>この期間の給料</span><strong>${yen(report.current.salary)}</strong></div>
+      <div class="report-metric"><span>支出合計</span><strong>${yen(report.current.expense)}</strong></div>
+      <div class="report-metric"><span>給料から使った額</span><strong>${yen(report.current.salaryUsed)}</strong></div>
+      <div class="report-metric"><span>給料の残り</span><strong>${yen(report.current.salaryRemaining)}</strong></div>
     </div>
     <div class="budget-card"><div class="budget-main-label">支出の推移（直近6か月）</div><div class="report-chart" role="img" aria-label="6か月の支出額を棒グラフで表示">${chart}</div><div class="budget-note">${differenceText}・前の3か月の平均 ${yen(report.priorThreeAverage)}</div></div>
-    <div class="budget-card"><div class="budget-main-label">月ごとの収入・支出・残り</div>${report.chart.slice().reverse().map(month=>{
-      const monthBalance = KakeiboCore.balanceFloorSummary(month.key, {mode:'calendar'}, 0, balances, transactions, currentKey).balance;
-      return `<div class="budget-row"><span>${budgetMonthLabel(month.key)}</span><strong>収入 ${yen(month.income)}<br>支出 ${yen(month.expense)}<br>収入から残った額 ${month.net < 0 ? '−' : '+'}${yen(Math.abs(month.net))}<br>${month.key === currentKey ? '現在の合計残高' : '月末の合計残高（推定）'} ${yen(monthBalance)}</strong></div>`;
-    }).join('')}</div>
-    <div class="budget-note">「収入から残った額」はその月の収入−支出です。月末残高は記録からの推定で、後から残高を直接補正した場合、過去の値は正確でないことがあります。暦月（1日〜月末）で集計し、銀行→現金の振替は収支に含めません。</div>`;
+    <div class="budget-card"><div class="budget-main-label">月ごとの給料と支出</div>${report.chart.slice().reverse().map(month=>
+      `<div class="budget-row"><span>${budgetMonthLabel(month.key)}</span><strong>給料 ${yen(month.salary)}<br>支出 ${yen(month.expense)}<br>給料から使った額 ${yen(month.salaryUsed)}<br>給料の残り ${yen(month.salaryRemaining)}</strong></div>`
+    ).join('')}</div>
+    <div class="budget-note">${report.current.start} 〜 ${new Date(new Date(report.current.end+'T12:00:00').getTime()-86400000).toLocaleDateString('ja-JP')} の集計です。その他の収入 ${yen(report.current.otherIncome)}。給料から使った額は「支出をまず給料から支払った」として計算し、給料を超えた支出は含めません。銀行→現金の振替は支出に含めません。以前の収入が給料に入らない場合は、その記録を編集して「この収入は給料」を選んでください。</div>`;
 }
 
 function isBankHoliday(dateStr){
@@ -1471,6 +1480,39 @@ function budgetMonthLabel(key){
   return `${year}年${month}月`;
 }
 
+function renderBudgetSteps(key, currentKey, content){
+  if(key !== currentKey) return;
+  const period = KakeiboCore.periodMonthReport(key, budget, transactions, isBankHoliday);
+  const salary = period.salary;
+  const salaryTx = transactions.filter(item=>item.date >= period.start && item.date < period.end && KakeiboCore.isSalaryIncome(item))
+    .sort((a,b)=>b.date.localeCompare(a.date) || b.id - a.id)[0];
+  const total = computeBalances().total;
+  const floor = budget.entries[key]?.floorBalance;
+  content.insertAdjacentHTML(floor == null ? 'afterbegin' : 'beforeend', `<div class="budget-steps"><div class="budget-steps-title">この期間の設定：3ステップ</div>
+    <div class="budget-step"><div class="budget-step-head"><span>① 給料を入力</span><strong>${salary ? yen(salary) : '未入力'}</strong></div><div class="budget-note">給料を保存すると、銀行または現金の残高が自動で増えます。</div><button class="small-btn" id="budgetSalaryBtn" type="button">${salaryTx ? '給料の記録を確認・編集' : '給料を入力する'}</button></div>
+    <div class="budget-step"><div class="budget-step-head"><span>② 合計残高を確認</span><strong>${yen(total)}</strong></div><div class="budget-note">現金＋銀行の合計。実際の残高と違うときだけ修正してください。</div><button class="small-btn" id="budgetBalanceBtn" type="button">残高が違う場合は修正</button></div>
+    <div class="budget-step"><div class="budget-step-head"><span>③ 残高を何円まで減らしていい？</span><strong>${floor == null ? '未設定' : yen(floor)}</strong></div><div class="budget-note">例：17万円あるなら、10万円と入力すると7万円使えます。</div><button class="small-btn" id="budgetFloorBtn" type="button">${floor == null ? '金額を設定する' : '金額を変更する'}</button></div></div>`);
+  document.getElementById('budgetSalaryBtn').addEventListener('click', ()=>{
+    if(salaryTx){
+      editingTxId = salaryTx.id;
+      loadEditModal(salaryTx);
+      return;
+    }
+    openModal();
+    setType('income');
+    document.getElementById('salaryKindInput').checked = true;
+    document.getElementById('placeInput').value = '給料';
+    currentSource = 'bank';
+    updateSourceButtons();
+    setTimeout(()=>document.getElementById('amountInput').focus(), 220);
+  });
+  document.getElementById('budgetBalanceBtn').addEventListener('click', ()=>{
+    document.getElementById('settingsBtn').click();
+    document.getElementById('openBalanceSettingsBtn').click();
+  });
+  document.getElementById('budgetFloorBtn').addEventListener('click', ()=>openBudgetEntry(key));
+}
+
 function renderBudget(){
   const currentKey = currentBudgetPeriod().key;
   budgetViewKey ||= currentKey;
@@ -1484,6 +1526,7 @@ function renderBudget(){
     const over = floor.remaining < 0;
     content.innerHTML = `<div class="budget-card ${over ? 'over' : ''}"><div class="budget-main-label">${over ? '残したい額を下回っています' : '今使える金額'}</div><div class="budget-main-amount">${yen(Math.abs(floor.remaining))}</div><button class="small-btn" id="editBudgetEntryBtn" type="button">残したい金額を変更</button><div class="budget-period">${floor.start} 〜 ${new Date(new Date(floor.end+'T12:00:00').getTime()-86400000).toLocaleDateString('ja-JP')}</div><div class="budget-note">${key === currentKey ? '現金と銀行の合計残高から自動計算しています。' : '記録から期間末の合計残高を推定しています。'}振替は使える額を変えません。</div><div class="budget-row"><span>${key === currentKey ? '現在の合計残高' : '期間末の合計残高（推定）'}</span><strong>${yen(floor.balance)}</strong></div><div class="budget-row"><span>残しておきたい金額</span><strong>${yen(floor.floor)}</strong></div><div class="budget-row"><span>この期間の支出</span><strong>${yen(floor.spent)}</strong></div></div>`;
     document.getElementById('editBudgetEntryBtn').addEventListener('click', ()=>openBudgetEntry(key));
+    renderBudgetSteps(key, currentKey, content);
     return;
   }
   const summary = KakeiboCore.budgetSummary(key, budget, budget.entries, transactions, isBankHoliday);
@@ -1512,6 +1555,7 @@ function renderBudget(){
     content.innerHTML = `<div class="budget-card ${over ? 'over' : ''}"><div class="budget-main-label">${over ? '使用予算を超過' : 'あと使える金額（旧方式）'}</div><div class="budget-main-amount">${yen(Math.abs(summary.remaining))}</div><button class="small-btn" id="editBudgetEntryBtn" type="button">残したい金額で設定し直す</button><div class="budget-period">${summary.start} 〜 ${new Date(new Date(summary.end+'T12:00:00').getTime()-86400000).toLocaleDateString('ja-JP')}</div><div class="budget-progress"><span style="width:${Math.min(100, Math.max(0, percent))}%"></span></div><div class="budget-note">以前の支出上限方式です。新方式に変更する場合は、残しておきたい合計残高を入力してください。${note}</div>${rows.map(([label,value])=>`<div class="budget-row"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div>`;
   }
   document.getElementById('editBudgetEntryBtn').addEventListener('click', ()=>openBudgetEntry(key));
+  renderBudgetSteps(key, currentKey, content);
 }
 
 function openBudgetEntry(key){
@@ -1527,8 +1571,10 @@ function updateBudgetAmountHint(){
   const input = document.getElementById('budgetAmountInput');
   const total = KakeiboCore.balanceFloorSummary(editingBudgetKey, budget, 0, balances, transactions, currentBudgetPeriod().key, isBankHoliday).balance;
   const floor = input.value === '' ? null : Number(input.value);
-  const result = floor === null || !Number.isFinite(floor) ? '' : ` → ${total - floor >= 0 ? '使える金額' : '残したい額を下回る金額'} ${yen(Math.abs(total - floor))}`;
-  document.getElementById('budgetAmountHint').textContent = `合計残高 ${yen(total)} − 残しておきたい金額${result}`;
+  const result = floor === null || !Number.isFinite(floor)
+    ? '金額を入力すると使える額が表示されます。'
+    : `${yen(total)} − ${yen(floor)} ＝ ${total - floor >= 0 ? '使える金額' : '残高の不足'} ${yen(Math.abs(total - floor))}`;
+  document.getElementById('budgetAmountHint').textContent = result;
 }
 
 document.getElementById('budgetAmountInput').addEventListener('input', updateBudgetAmountHint);
@@ -1538,7 +1584,8 @@ function promptCurrentBudget(){
   const key = currentBudgetPeriod().key;
   if(!budget.entries[key] && promptedBudgetKey !== key){
     promptedBudgetKey = key;
-    openBudgetEntry(key);
+    budgetViewKey = key;
+    document.getElementById('budgetTab').click();
   }
 }
 
@@ -1596,7 +1643,7 @@ document.getElementById('reportPrevBtn').addEventListener('click', ()=>{
 });
 document.getElementById('reportNextBtn').addEventListener('click', ()=>{
   const next = KakeiboCore.shiftMonth(reportViewKey, 1);
-  if(next <= todayStr().slice(0, 7)) reportViewKey = next;
+  if(next <= currentBudgetPeriod().key) reportViewKey = next;
   renderReport();
 });
 
@@ -1640,6 +1687,7 @@ function openModal(){
   document.getElementById('placeInput').value = '';
   document.getElementById('amountInput').value = '';
   setType('expense');
+  document.getElementById('salaryKindInput').checked = false;
   currentSource = 'cash';
   updateSourceButtons();
   document.getElementById('deleteBtn').style.display = 'none';
@@ -1765,6 +1813,7 @@ function setType(type){
   const placeInput = document.getElementById('placeInput');
   const sourceRow = document.getElementById('sourceRow');
   sourceRow.hidden = type === 'transfer';
+  document.getElementById('salaryKindRow').hidden = type !== 'income';
   if(type === 'expense'){
     placeLabel.textContent = 'どこで（お店・内容）';
     placeInput.placeholder = '例）スーパー、コンビニ';
@@ -1810,6 +1859,7 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
     return;
   }
   const finalPlace = place || '（内容なし）';
+  const incomeKind = currentType === 'income' && document.getElementById('salaryKindInput').checked ? 'salary' : 'other';
 
   if(editingTxId){
     const idx = transactions.findIndex(t => t.id === editingTxId);
@@ -1819,7 +1869,8 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
       place: finalPlace,
       amount: amount,
       date: date,
-      source: currentSource
+      source: currentSource,
+      incomeKind
     };
   } else {
     transactions.push({
@@ -1828,7 +1879,8 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
       place: finalPlace,
       amount: amount,
       date: date,
-      source: currentSource
+      source: currentSource,
+      incomeKind
     });
   }
   save();
@@ -1848,7 +1900,7 @@ document.getElementById('deleteBtn').addEventListener('click', ()=>{
 function createBackup(){
   return {
     app: 'kakeibo',
-    formatVersion: 5,
+    formatVersion: 6,
     exportedAt: new Date().toISOString(),
     transactions,
     balances,
@@ -1905,7 +1957,8 @@ function validateBackup(data){
       place: String(item.place || '（内容なし）'),
       amount,
       date: item.date,
-      source: item.source === 'bank' ? 'bank' : 'cash'
+      source: item.source === 'bank' ? 'bank' : 'cash',
+      incomeKind: item.incomeKind === 'salary' ? 'salary' : item.incomeKind === 'other' ? 'other' : null
     };
   });
 
@@ -2094,6 +2147,7 @@ document.getElementById('saveBudgetSettingsBtn').addEventListener('click', ()=>{
   document.getElementById('viewSwitch').style.gridTemplateColumns = budget.enabled ? 'repeat(5,1fr)' : 'repeat(4,1fr)';
   if(!budget.enabled && viewMode === 'budget') document.querySelector('#viewSwitch [data-view="list"]').click();
   budgetViewKey = currentBudgetPeriod().key;
+  if(changedPeriod) reportViewKey = currentBudgetPeriod().key;
   showSettingsPanel('settingsHome');
   renderAll();
   if(budget.enabled && !budget.entries[currentBudgetPeriod().key]){
@@ -2200,7 +2254,7 @@ document.addEventListener('visibilitychange', ()=>{
       setTimeout(promptCurrentBudget, 300);
     }
     if(viewMode === 'report'){
-      reportViewKey = todayStr().slice(0, 7);
+      reportViewKey = currentBudgetPeriod().key;
       renderReport();
     }
   }

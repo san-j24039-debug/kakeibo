@@ -16,6 +16,9 @@ const {
   balanceFloorSummary,
   calendarMonthReport,
   reportComparison,
+  isSalaryIncome,
+  periodMonthReport,
+  periodReportComparison,
   reconciliationEntries
 } = require('../kakeibo-core.js');
 
@@ -371,4 +374,46 @@ test('monthly remainder is income minus expenses and ignores bank-to-cash transf
   assert.equal(month.income, 150000);
   assert.equal(month.expense, 50000);
   assert.equal(month.net, 100000);
+});
+
+test('salary income is distinct from other income and remains backward compatible', ()=>{
+  assert.equal(isSalaryIncome({type:'income',incomeKind:'salary',place:'会社'}), true);
+  assert.equal(isSalaryIncome({type:'income',place:'給料'}), true);
+  assert.equal(isSalaryIncome({type:'income',place:'10月分の給料'}), true);
+  assert.equal(isSalaryIncome({type:'income',incomeKind:'other',place:'給料'}), false);
+  assert.equal(isSalaryIncome({type:'income',place:'お小遣い'}), false);
+});
+
+test('a 28th payday assigns the salary and spending to the following budget month', ()=>{
+  const settings = {mode:'payday',payday:28,holidayAdjustment:'none'};
+  const entries = [
+    {type:'income',incomeKind:'salary',source:'bank',amount:110000,date:'2026-10-28'},
+    {type:'income',incomeKind:'other',source:'cash',amount:5000,date:'2026-10-29'},
+    {type:'expense',source:'bank',amount:45000,date:'2026-11-02'},
+    {type:'transfer',source:'bank',amount:10000,date:'2026-11-03'},
+    {type:'expense',source:'cash',amount:5000,date:'2026-11-04'}
+  ];
+  const report = periodMonthReport('2026-11', settings, entries);
+  assert.equal(report.start, '2026-10-28');
+  assert.equal(report.end, '2026-11-28');
+  assert.equal(report.salary, 110000);
+  assert.equal(report.otherIncome, 5000);
+  assert.equal(report.expense, 50000);
+  assert.equal(report.salaryUsed, 50000);
+  assert.equal(report.salaryRemaining, 60000);
+  assert.equal(periodMonthReport('2026-10', settings, entries).salary, 0);
+});
+
+test('salary-used amount is capped at salary and empty salary stays zero', ()=>{
+  const items = [
+    {type:'income',incomeKind:'salary',amount:30000,date:'2026-10-01'},
+    {type:'expense',amount:40000,date:'2026-10-02'}
+  ];
+  const report = periodMonthReport('2026-10', {mode:'calendar'}, items);
+  assert.equal(report.salaryUsed, 30000);
+  assert.equal(report.salaryRemaining, 0);
+  const comparison = periodReportComparison('2026-11', {mode:'calendar'}, items);
+  assert.equal(comparison.previous.salary, 30000);
+  assert.equal(comparison.current.salaryUsed, 0);
+  assert.equal(comparison.chart.length, 6);
 });

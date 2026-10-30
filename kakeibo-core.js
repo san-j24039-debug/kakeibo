@@ -188,6 +188,45 @@
       priorThreeAverage:priorThree.reduce((sum, month)=>sum + month.expense, 0) / 3, chart};
   }
 
+  function isSalaryIncome(item){
+    return item.type === 'income' &&
+      (item.incomeKind === 'salary' ||
+        (item.incomeKind == null && /(給料|給与)/.test(String(item.place || ''))));
+  }
+
+  function periodMonthReport(key, settings, transactions, isHoliday = ()=>false){
+    const start = periodStart(key, settings, isHoliday);
+    const end = periodStart(shiftMonth(key, 1), settings, isHoliday);
+    const totals = {key, start, end, salary:0, otherIncome:0, income:0, expense:0,
+      salaryUsed:0, salaryRemaining:0, net:0};
+    for(const item of transactions || []){
+      if(item.date < start || item.date >= end) continue;
+      const amount = finiteNumber(item.amount);
+      if(amount <= 0) continue;
+      if(item.type === 'expense') totals.expense += amount;
+      else if(item.type === 'income'){
+        totals.income += amount;
+        if(isSalaryIncome(item)) totals.salary += amount;
+        else totals.otherIncome += amount;
+      }
+    }
+    totals.salaryUsed = Math.min(totals.salary, totals.expense);
+    totals.salaryRemaining = totals.salary - totals.salaryUsed;
+    totals.net = totals.income - totals.expense;
+    return totals;
+  }
+
+  function periodReportComparison(key, settings, transactions, isHoliday = ()=>false){
+    const current = periodMonthReport(key, settings, transactions, isHoliday);
+    const previous = periodMonthReport(shiftMonth(key, -1), settings, transactions, isHoliday);
+    const priorThree = [1, 2, 3].map(offset=>
+      periodMonthReport(shiftMonth(key, -offset), settings, transactions, isHoliday));
+    const chart = Array.from({length:6}, (_, index)=>
+      periodMonthReport(shiftMonth(key, index - 5), settings, transactions, isHoliday));
+    return {current, previous, difference:current.expense - previous.expense,
+      priorThreeAverage:priorThree.reduce((sum, month)=>sum + month.expense, 0) / 3, chart};
+  }
+
   function reconciliationEntries(current, actual, date, firstId){
     const cashDifference = Number(actual.cash) - Number(current.cash);
     const bankDifference = Number(actual.bank) - Number(current.bank);
@@ -207,5 +246,5 @@
 
   return {transactionTotals, normalizeBalances, computeBalances, initialBalancesForCurrent,
     safeHttpUrl, memoTotal, shiftMonth, migrateBudgetPeriodLabels, periodStart, periodForDate, budgetSummary, balanceFloorSummary,
-    calendarMonthReport, reportComparison, reconciliationEntries};
+    calendarMonthReport, reportComparison, isSalaryIncome, periodMonthReport, periodReportComparison, reconciliationEntries};
 });
