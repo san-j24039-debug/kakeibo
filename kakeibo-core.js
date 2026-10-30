@@ -116,7 +116,7 @@
 
   function budgetSummary(key, settings, entries, transactions, isHoliday = ()=>false){
     const entry = entries[key];
-    if(!entry) return null;
+    if(!entry || entry.floorBalance != null) return null;
     const start = periodStart(key, settings, isHoliday);
     const end = periodStart(shiftMonth(key, 1), settings, isHoliday);
     const previousKey = shiftMonth(key, -1);
@@ -139,6 +139,28 @@
     return {key, start, end, salary, savingsGoal, baseLimit, carry, carryFrom: entry.carryFrom || previousKey,
       limit, spent, remaining, savingsEstimate, plannedSavingsShortfall,
       shortage:savingsGoal == null ? 0 : Math.max(0, plannedSavingsShortfall - savingsGoal - remaining)};
+  }
+
+  function balanceFloorSummary(key, settings, floorBalance, balances, transactions, currentKey, isHoliday = ()=>false){
+    const start = periodStart(key, settings, isHoliday);
+    const end = periodStart(shiftMonth(key, 1), settings, isHoliday);
+    const all = Array.isArray(transactions) ? transactions : [];
+    let balance = computeBalances(balances, all).total;
+    // For past periods, reverse later recorded income and expenses to estimate
+    // the balance at the end of that period. Transfers never change the total.
+    if(key < currentKey){
+      for(const item of all){
+        if(item.date < end) continue;
+        const amount = finiteNumber(item.amount);
+        if(item.type === 'income') balance -= amount;
+        else if(item.type === 'expense') balance += amount;
+      }
+    }
+    const floor = Number(floorBalance);
+    const spent = all.reduce((sum, item)=>
+      item.type === 'expense' && item.date >= start && item.date < end
+        ? sum + finiteNumber(item.amount) : sum, 0);
+    return {key, start, end, balance, floor, remaining:balance - floor, spent};
   }
 
   function calendarMonthReport(key, transactions){
@@ -184,6 +206,6 @@
   }
 
   return {transactionTotals, normalizeBalances, computeBalances, initialBalancesForCurrent,
-    safeHttpUrl, memoTotal, shiftMonth, migrateBudgetPeriodLabels, periodStart, periodForDate, budgetSummary,
+    safeHttpUrl, memoTotal, shiftMonth, migrateBudgetPeriodLabels, periodStart, periodForDate, budgetSummary, balanceFloorSummary,
     calendarMonthReport, reportComparison, reconciliationEntries};
 });

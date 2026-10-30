@@ -13,10 +13,18 @@ const {
   periodStart,
   periodForDate,
   budgetSummary,
+  balanceFloorSummary,
   calendarMonthReport,
   reportComparison,
   reconciliationEntries
 } = require('../kakeibo-core.js');
+
+test('the page inline script parses', ()=>{
+  const source = readFileSync(require.resolve('../index.html'), 'utf8');
+  const match = source.match(/<script>([\s\S]*?)<\/script>/);
+  assert.ok(match);
+  assert.doesNotThrow(()=>new Function(match[1]));
+});
 
 test('initial cash and bank balances are shown without transactions', ()=>{
   assert.deepEqual(
@@ -312,4 +320,55 @@ test('a directly chosen budget can differ from salary minus savings goal', ()=>{
   assert.equal(revised.remaining, 55000);
   assert.equal(revised.plannedSavingsShortfall, 10000);
   assert.equal(revised.savingsEstimate, 40000);
+});
+
+test('a balance floor of 100000 leaves 70000 spendable from 170000 total', ()=>{
+  const settings = {mode:'calendar'};
+  const balances = {cashInitial:20000, bankInitial:150000};
+  const transactions = [];
+  const summary = ()=>balanceFloorSummary('2026-10', settings, 100000, balances, transactions, '2026-10');
+  assert.equal(summary().remaining, 70000);
+  transactions.push({type:'expense',source:'cash',amount:5000,date:'2026-10-25'});
+  assert.equal(summary().remaining, 65000);
+  transactions.push({type:'transfer',source:'bank',amount:10000,date:'2026-10-26'});
+  assert.equal(summary().remaining, 65000);
+  transactions.push({type:'income',source:'bank',amount:20000,date:'2026-10-27'});
+  assert.equal(summary().remaining, 85000);
+  assert.equal(balanceFloorSummary('2026-10', settings, 190000, balances, transactions, '2026-10').remaining, -5000);
+});
+
+test('past balance-floor periods exclude later income and expenses', ()=>{
+  const transactions = [
+    {type:'expense',source:'cash',amount:10000,date:'2026-10-20'},
+    {type:'income',source:'bank',amount:30000,date:'2026-11-02'},
+    {type:'expense',source:'bank',amount:5000,date:'2026-11-03'},
+    {type:'transfer',source:'bank',amount:2000,date:'2026-11-04'}
+  ];
+  const summary = balanceFloorSummary('2026-10', {mode:'calendar'}, 100000,
+    {cashInitial:20000, bankInitial:150000}, transactions, '2026-11');
+  assert.equal(summary.balance, 160000);
+  assert.equal(summary.remaining, 60000);
+  assert.equal(summary.spent, 10000);
+});
+
+test('an older spending budget after a balance-floor period does not produce NaN', ()=>{
+  const entries = {
+    '2026-10':{floorBalance:100000},
+    '2026-11':{baseLimit:50000,carryOverride:null}
+  };
+  const summary = budgetSummary('2026-11', {mode:'calendar'}, entries, []);
+  assert.equal(summary.carry, 0);
+  assert.equal(summary.remaining, 50000);
+});
+
+test('monthly remainder is income minus expenses and ignores bank-to-cash transfers', ()=>{
+  const items = [
+    {type:'income',amount:150000,date:'2026-10-01'},
+    {type:'expense',amount:50000,date:'2026-10-10'},
+    {type:'transfer',amount:20000,date:'2026-10-11'}
+  ];
+  const month = calendarMonthReport('2026-10', items);
+  assert.equal(month.income, 150000);
+  assert.equal(month.expense, 50000);
+  assert.equal(month.net, 100000);
 });
